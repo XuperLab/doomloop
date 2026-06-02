@@ -1205,6 +1205,11 @@ export class Game {
     this.overlay.hideDeath();
     this.overlay.hideVictory();
 
+    // Spawn player if not already spawned (first game start)
+    if (!this.player) {
+      this.spawnPlayer();
+    }
+
     // Sprint 4: Init subsystems
     this.powerUpManager = new PowerUpManager(this.scene);
     const diffConfig = DIFFICULTY_CONFIGS[this.difficulty];
