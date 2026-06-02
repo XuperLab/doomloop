@@ -1,11 +1,10 @@
-# Doomloop deploy-config
-# Deploy to any static host (Vercel / Netlify / GitHub Pages)
-
+# Deployment Configuration for Doomloop Sprint 2
 project_name: doomloop
-directory: /opt/data/workspace/projects/doomloop
+version: "1.1.0"  # Sprint 2 adds mobile touch controls
 build_command: npm run build
-output_dir: dist
-framework: vite
-type: static
-env:
-  NODE_VERSION: "18"
+build_output: dist/
+static_dir: dist/
+entry_point: dist/index.html
+type: static_site
+platform: static  # Deploy as static files (Vite build output)
+notes: "Sprint 2: Mobile touch controls. No new npm dependencies — vanilla JS DOM touch events only. Desktop code path unchanged."

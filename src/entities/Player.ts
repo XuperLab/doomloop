@@ -29,7 +29,6 @@ export class Player extends Entity {
   weapon: PlasmaRifle;
   private camera: Camera;
   private physicsWorld: PhysicsWorld;
-  private velocity = new THREE.Vector3();
   private currentSpeed = 0;
 
   constructor(camera: Camera, physicsWorld: PhysicsWorld) {
@@ -85,10 +84,20 @@ export class Player extends Entity {
 
     // Compute desired movement direction
     const moveDir = new THREE.Vector3();
-    if (input.moveForward) moveDir.add(forward);
-    if (input.moveBackward) moveDir.sub(forward);
-    if (input.moveLeft) moveDir.sub(right);
-    if (input.moveRight) moveDir.add(right);
+
+    // Check for analog input first (Sprint 2 — TouchInputAdapter)
+    if (input.moveAnalogX !== undefined && input.moveAnalogZ !== undefined) {
+      // Analog: C = forward * analogZ + right * analogX
+      const fwd = forward.clone().multiplyScalar(input.moveAnalogZ);
+      const rgt = right.clone().multiplyScalar(input.moveAnalogX);
+      moveDir.copy(fwd.add(rgt));
+    } else {
+      // Fall back to boolean directional input (Sprint 1 — desktop)
+      if (input.moveForward) moveDir.add(forward);
+      if (input.moveBackward) moveDir.sub(forward);
+      if (input.moveLeft) moveDir.sub(right);
+      if (input.moveRight) moveDir.add(right);
+    }
 
     // Normalize if moving diagonally
     if (moveDir.lengthSq() > 0) {

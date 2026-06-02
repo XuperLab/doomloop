@@ -1,6 +1,7 @@
 import { MOUSE_SENSITIVITY } from '../utils/Constants';
 
 export interface InputState {
+  // Sprint 1 fields (unchanged)
   moveForward: boolean;
   moveBackward: boolean;
   moveLeft: boolean;
@@ -11,6 +12,10 @@ export interface InputState {
   mouseDeltaX: number;
   mouseDeltaY: number;
   restart: boolean;
+
+  // Sprint 2 additions (optional — set by TouchInputAdapter)
+  moveAnalogX?: number;  // -1 (left) to +1 (right)
+  moveAnalogZ?: number;  // -1 (backward) to +1 (forward)
 }
 
 export class InputManager {
@@ -137,5 +142,15 @@ export class InputManager {
   /** Called externally when R is pressed for restart */
   notifyRestartPressed(): void {
     this._restartPressed = true;
+  }
+
+  /** Reset all input state (required by InputAdapter interface) */
+  reset(): void {
+    this.keys.clear();
+    this._mouseDeltaX = 0;
+    this._mouseDeltaY = 0;
+    this._firePressed = false;
+    this._jumpPressed = false;
+    this._restartPressed = false;
   }
 }

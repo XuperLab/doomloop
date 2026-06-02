@@ -2,6 +2,9 @@ import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { GameLoop } from './engine/GameLoop';
 import { InputManager, InputState } from './engine/InputManager';
+import { InputAdapter } from './input/InputAdapter';
+import { TouchInputAdapter } from './input/TouchInputAdapter';
+import { isTouchDevice } from './input/MobileDetector';
 import { Camera } from './engine/Camera';
 import { PhysicsWorld, CollisionPair } from './physics/PhysicsWorld';
 import { ArenaGenerator } from './arena/ArenaGenerator';
@@ -38,7 +41,8 @@ export class Game {
 
   // Engine
   private gameLoop: GameLoop;
-  private inputManager: InputManager;
+  private inputAdapter: InputAdapter;
+  private inputManager: InputManager; // Desktop adapter (kept for pointer lock access)
   private camera: Camera;
   private physicsWorld: PhysicsWorld;
 
@@ -67,6 +71,9 @@ export class Game {
   // State
   private gamePhase: 'loading' | 'menu' | 'playing' | 'dead' | 'victory' = 'loading';
   private currentSeed = 0;
+  private isTouchDevice = false;
+
+  // Desktop-specific input state (for legacy defaults)
   private lastInput: InputState = {
     moveForward: false, moveBackward: false, moveLeft: false, moveRight: false,
     fire: false, jumpPressed: false, sprint: false,
@@ -78,6 +85,9 @@ export class Game {
 
   constructor(container: HTMLElement) {
     this.container = container;
+
+    // Detect touch device early
+    this.isTouchDevice = isTouchDevice();
 
     // Renderer
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -104,8 +114,9 @@ export class Game {
     const hemiLight = new THREE.HemisphereLight(0x4466aa, 0x222244, 0.5);
     this.scene.add(hemiLight);
 
-    // Engine
+    // Engine — Create InputManager as default
     this.inputManager = new InputManager();
+    this.inputAdapter = this.inputManager;
     this.camera = new Camera(window.innerWidth / window.innerHeight);
     this.physicsWorld = new PhysicsWorld();
     this.gameLoop = new GameLoop(PHYSICS_FIXED_DT, MAX_FRAME_DELTA);
@@ -146,31 +157,41 @@ export class Game {
 
   /** Initialize and start the game */
   async init(): Promise<void> {
-    this.inputManager.init(this.renderer.domElement);
+    if (this.isTouchDevice) {
+      // Touch device: use TouchInputAdapter, skip pointer lock
+      const touchAdapter = new TouchInputAdapter();
+      this.inputAdapter = touchAdapter;
+      this.inputAdapter.init(this.renderer.domElement);
+    } else {
+      // Desktop: use InputManager with pointer lock
+      this.inputManager.init(this.renderer.domElement);
 
-    // Setup pointer lock
-    this.inputManager.onPointerLockChange = () => {
-      this.overlay.hideStart();
-    };
+      // Setup pointer lock
+      this.inputManager.onPointerLockChange = () => {
+        this.overlay.hideStart();
+      };
 
-    this.inputManager.onPointerLockError = () => {
-      this.overlay.showPointerLockRequired();
-    };
+      this.inputManager.onPointerLockError = () => {
+        this.overlay.showPointerLockRequired();
+      };
 
-    // Setup overlay callbacks
-    this.overlay.onStartClick = () => {
-      this.inputManager.requestPointerLock(this.renderer.domElement);
-      if (this.gamePhase === 'menu') {
-        this.startPlaying();
-      }
-    };
+      // Desktop overlay callbacks
+      this.overlay.onStartClick = () => {
+        this.inputManager.requestPointerLock(this.renderer.domElement);
+        if (this.gamePhase === 'menu') {
+          this.startPlaying();
+        }
+      };
 
+      this.overlay.onPointerLockRetry = () => {
+        this.inputManager.requestPointerLock(this.renderer.domElement);
+        this.overlay.hidePointerLockRequired();
+      };
+    }
+
+    // Shared overlay callbacks
     this.overlay.onRestartFromDeath = () => this.restart();
     this.overlay.onRestartFromVictory = () => this.restart();
-    this.overlay.onPointerLockRetry = () => {
-      this.inputManager.requestPointerLock(this.renderer.domElement);
-      this.overlay.hidePointerLockRequired();
-    };
 
     // Build initial arena
     this.buildArena(this.currentSeed);
@@ -178,7 +199,13 @@ export class Game {
     // Show start overlay
     this.gamePhase = 'menu';
     this.overlay.hideLoading();
-    this.overlay.showStart();
+
+    if (this.isTouchDevice) {
+      this.overlay.showMobileStart();
+    } else {
+      this.overlay.showStart();
+    }
+
     this.hud.hide();
     this.crosshair.hide();
 
@@ -189,8 +216,8 @@ export class Game {
   // ── Game Loop ──
 
   private fixedUpdate = (dt: number): void => {
-    // Poll input
-    this.lastInput = this.inputManager.poll();
+    // Poll input from the active adapter
+    this.lastInput = this.inputAdapter.poll();
 
     if (this.gamePhase === 'dead' || this.gamePhase === 'victory') {
       if (this.lastInput.restart) {
@@ -495,16 +522,24 @@ export class Game {
         );
       } else if (state === 'victory') {
         this.gamePhase = 'victory';
-        this.overlay.showVictory();
+        if (this.isTouchDevice) {
+          this.overlay.showMobileVictory();
+        } else {
+          this.overlay.showVictory();
+          this.inputManager.exitPointerLock();
+        }
         this.hud.hide();
         this.crosshair.hide();
-        this.inputManager.exitPointerLock();
       } else if (state === 'gameOver') {
         this.gamePhase = 'dead';
-        this.overlay.showDeath(waveNum);
+        if (this.isTouchDevice) {
+          this.overlay.showMobileDeath(waveNum);
+        } else {
+          this.overlay.showDeath(waveNum);
+          this.inputManager.exitPointerLock();
+        }
         this.hud.hide();
         this.crosshair.hide();
-        this.inputManager.exitPointerLock();
       }
     };
   }
@@ -512,7 +547,7 @@ export class Game {
   // ── Input Setup ──
 
   private setupInput(): void {
-    // Handle jump via space key
+    // Handle jump via space key (desktop-only)
     document.addEventListener('keydown', (e) => {
       if (e.code === 'Space' && this.gamePhase === 'playing') {
         this.inputManager.notifyJumpPressed();
@@ -561,22 +596,27 @@ export class Game {
     // Reset camera
     this.camera.reset();
 
+    // Reset the input adapter
+    this.inputAdapter.reset();
+
     // Show HUD and crosshair
     this.hud.show();
     this.crosshair.show();
 
-    // Set phase to menu (click to start)
+    // Set phase to menu (tap/click to start)
     this.gamePhase = 'menu';
     this.overlay.hideDeath();
     this.overlay.hideVictory();
-    this.overlay.showStart();
 
-    // Request pointer lock
-    this.inputManager.requestPointerLock(this.renderer.domElement);
-
-    // Start the game immediately if pointer lock is already active
-    // In many cases, the click event from the restart button will trigger pointer lock
-    this.startPlaying();
+    if (this.isTouchDevice) {
+      this.overlay.showMobileStart();
+    } else {
+      this.overlay.showStart();
+      // Request pointer lock
+      this.inputManager.requestPointerLock(this.renderer.domElement);
+      // Start the game immediately if pointer lock is already active
+      this.startPlaying();
+    }
   }
 
   private clearEntities(): void {
@@ -652,13 +692,18 @@ export class Game {
     const h = window.innerHeight;
     this.renderer.setSize(w, h);
     this.camera.setAspect(w / h);
+
+    // Notify touch adapter of viewport change
+    if (this.isTouchDevice && this.inputAdapter instanceof TouchInputAdapter) {
+      // The adapter recalculates joystick center on next touch
+    }
   };
 
   // ── Cleanup ──
 
   destroy(): void {
     this.gameLoop.stop();
-    this.inputManager.destroy();
+    this.inputAdapter.destroy();
     this.clearEntities();
     this.arenaMesh.clear();
     this.deathEffect.clear();

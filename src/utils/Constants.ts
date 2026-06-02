@@ -88,6 +88,20 @@ export const HIT_MARKER_DURATION = 0.1;
 export const SCREEN_SHAKE_DURATION = 0.4;
 export const SCREEN_SHAKE_INTENSITY = 0.08;
 
+// ── Touch Controls (Sprint 2) ──
+export const JOYSTICK_MAX_RADIUS = 80;          // px — maximum drag distance
+export const JOYSTICK_DEAD_ZONE = 8;            // px — dead zone radius
+export const TOUCH_SENSITIVITY = 0.008;          // rad/px (~0.46°/px)
+export const SPRINT_DOUBLE_TAP_WINDOW = 300;     // ms between taps
+export const CONTROL_FADE_DELAY = 3000;          // ms — fade idle controls (P2)
+export const FADE_OPACITY = 0.3;                 // faded opacity (P2)
+export const DEFAULT_OPACITY = 0.4;              // normal opacity
+export const ACTIVE_OPACITY = 0.8;               // pressed opacity
+
+// ── Button Dimensions ──
+export const FIRE_BUTTON_SIZE = 60;              // px minimum
+export const JUMP_BUTTON_SIZE = 50;              // px minimum
+
 // ── Collision Groups ──
 export const COLLISION_GROUPS = {
   PLAYER: 0x001,

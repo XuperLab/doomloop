@@ -2,11 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Doomloop</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      overscroll-behavior: none;
+      position: fixed;
+      background: #000;
+    }
     #app { width: 100%; height: 100%; position: relative; }
     canvas { display: block; }
 
@@ -61,6 +67,51 @@
     #start-overlay .controls-hint kbd {
       background: #222; padding: 2px 8px; border-radius: 3px;
       border: 1px solid #444; font-size: 0.8rem; color: #ddd;
+    }
+
+    /* Mobile Start Screen */
+    #mobile-start-text {
+      display: none;
+      font-size: 1.3rem; color: #ccc; margin-bottom: 2rem;
+    }
+    #mobile-control-diagram {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 1.5rem;
+    }
+    #mobile-control-diagram .diagram-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #mobile-control-diagram .ctrl-icon {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.6rem;
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      color: rgba(255,255,255,0.7);
+    }
+    #mobile-control-diagram .ctrl-icon.red {
+      background: rgba(255,68,68,0.4);
+      border: 2px solid rgba(255,68,68,0.6);
+    }
+    #mobile-control-diagram .ctrl-icon.green {
+      background: rgba(68,200,68,0.4);
+      border: 2px solid rgba(68,200,68,0.6);
+    }
+    #mobile-control-diagram .ctrl-icon.joystick {
+      background: rgba(255,255,255,0.1);
+      border: 2px solid rgba(255,255,255,0.4);
+    }
+    #mobile-control-diagram .diagram-label {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.5);
+      font-family: 'Segoe UI', Tahoma, sans-serif;
     }
 
     /* HUD */
@@ -190,7 +241,7 @@
       border-radius: 4px; cursor: pointer;
     }
   </style>
-  <script type="module" crossorigin src="./assets/index-DHo5JH-T.js"></script>
+  <script type="module" crossorigin src="./assets/index-DB7Z52AE.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/three-B4v6BLg2.js">
   <link rel="modulepreload" crossorigin href="./assets/cannon-CbR5xzcU.js">
 </head>
@@ -207,6 +258,20 @@
     <div id="start-overlay" class="hidden">
       <h1>Doomloop</h1>
       <p>Click to start</p>
+      <p id="mobile-start-text">Tap to start</p>
+      <div id="mobile-control-diagram">
+        <div class="diagram-row">
+          <div class="ctrl-icon joystick">◉</div>
+          <span class="diagram-label">Move</span>
+          <div class="ctrl-icon red">✕</div>
+          <span class="diagram-label">Fire</span>
+          <div class="ctrl-icon green">▲</div>
+          <span class="diagram-label">Jump</span>
+        </div>
+        <div style="font-size:0.7rem;color:rgba(255,255,255,0.4);margin-top:4px;font-family:'Segoe UI',Tahoma,sans-serif;">
+          Drag left side to look → Double-tap forward to sprint
+        </div>
+      </div>
       <div class="controls-hint">
         <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move &nbsp;|&nbsp; <kbd>Shift</kbd> Sprint &nbsp;|&nbsp; <kbd>Space</kbd> Jump<br/>
         Mouse look &nbsp;|&nbsp; Left Click Fire &nbsp;|&nbsp; <kbd>R</kbd> Restart

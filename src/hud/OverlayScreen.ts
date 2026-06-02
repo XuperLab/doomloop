@@ -9,6 +9,10 @@ export class OverlayScreen {
   private pointerLockRequired: HTMLElement;
   private loadingScreen: HTMLElement;
 
+  // Mobile-specific
+  private mobileStartText: HTMLElement;
+  private mobileControlDiagram: HTMLElement;
+
   // Callbacks
   onStartClick: (() => void) | null = null;
   onRestartFromDeath: (() => void) | null = null;
@@ -25,6 +29,8 @@ export class OverlayScreen {
     this.notificationSub = this.notification.querySelector('.subtext')!;
     this.pointerLockRequired = document.getElementById('pointer-lock-required')!;
     this.loadingScreen = document.getElementById('loading-screen')!;
+    this.mobileStartText = document.getElementById('mobile-start-text')!;
+    this.mobileControlDiagram = document.getElementById('mobile-control-diagram')!;
 
     this.bindEvents();
   }
@@ -56,6 +62,25 @@ export class OverlayScreen {
     this.hideDeath();
     this.hideVictory();
     this.hideNotification();
+
+    // Desktop mode (default)
+    this.mobileStartText.style.display = 'none';
+    this.mobileControlDiagram.style.display = 'none';
+    const controlsHint = this.startOverlay.querySelector('.controls-hint') as HTMLElement;
+    if (controlsHint) controlsHint.style.display = 'block';
+  }
+
+  showMobileStart(): void {
+    this.startOverlay.classList.remove('hidden');
+    this.hideDeath();
+    this.hideVictory();
+    this.hideNotification();
+
+    // Mobile mode
+    this.mobileStartText.style.display = 'block';
+    this.mobileControlDiagram.style.display = 'flex';
+    const controlsHint = this.startOverlay.querySelector('.controls-hint') as HTMLElement;
+    if (controlsHint) controlsHint.style.display = 'none';
   }
 
   hideStart(): void {
@@ -67,12 +92,31 @@ export class OverlayScreen {
     this.deathWaveText.textContent = `Wave ${wave}/${5}`;
   }
 
+  showMobileDeath(wave: number): void {
+    // For mobile, the death screen already has "Play Again" button — click works fine
+    // We just ensure the restart hint says "Tap to Restart" instead of "Press R"
+    this.deathScreen.classList.add('visible');
+    this.deathWaveText.textContent = `Wave ${wave}/${5}`;
+    const restartHint = this.deathScreen.querySelector('.restart-hint') as HTMLElement;
+    if (restartHint) {
+      restartHint.textContent = 'Tap to restart';
+    }
+  }
+
   hideDeath(): void {
     this.deathScreen.classList.remove('visible');
   }
 
   showVictory(): void {
     this.victoryScreen.classList.add('visible');
+  }
+
+  showMobileVictory(): void {
+    this.victoryScreen.classList.add('visible');
+    const restartHint = this.victoryScreen.querySelector('.restart-hint') as HTMLElement;
+    if (restartHint) {
+      restartHint.textContent = 'Tap to play again';
+    }
   }
 
   hideVictory(): void {

@@ -1,47 +1,34 @@
-# Doomloop — Deployment Guide
+# Doomloop — Sprint 2: Mobile Touch Controls
 
-## Tech Stack
-- **Build:** Vite 5+
-- **Output:** Static HTML/JS/CSS in `dist/`
-- **Deploy Target:** Any static host (Vercel, Netlify, GitHub Pages, S3, etc.)
+## Deployment Instructions
 
-## Build
+### Build
 ```bash
-npm install
-npm run build    # outputs to dist/
-```
-
-## Deploy
-Upload the `dist/` directory to any static hosting provider.
-
-### Vercel
-```bash
-npx vercel --prod
-```
-No special config needed — Vercel auto-detects Vite.
-
-### Netlify
-- Build command: `npm run build`
-- Publish directory: `dist`
-
-### GitHub Pages
-```bash
+cd /opt/data/workspace/projects/doomloop
 npm run build
-# push dist/ to gh-pages branch
 ```
 
-## Configuration
-No server-side configuration needed. The game is fully client-side:
-- Zero external API calls
-- Zero CDN dependencies
-- Works offline after initial page load
-- No cookies, no analytics, no tracking
+This produces:
+- `dist/index.html` (11.76 KB)
+- `dist/assets/index-DB7Z52AE.js` (55.21 KB)
+- `dist/assets/cannon-CbR5xzcU.js` (84.08 KB)
+- `dist/assets/three-B4v6BLg2.js` (459.39 KB)
 
-## Browser Requirements
-- Chrome 90+, Firefox 90+, Edge 90+
-- Pointer Lock API support
-- WebGL 1.0+ (Three.js requirement)
-- Desktop only (no mobile support in Sprint 1)
+### Deploy
+The build output is a static site. Serve the `dist/` directory with any static file server (nginx, Caddy, Vercel, Netlify, etc.).
 
-## Environment Variables
-None required.
+### Key Changes (Sprint 2)
+- **5 new files** in `src/input/`: `InputAdapter.ts`, `MobileDetector.ts`, `TouchInputAdapter.ts`, `TouchTypes.ts`, `touch-controls.css`
+- **6 modified files**: `Game.ts`, `InputManager.ts`, `Player.ts`, `OverlayScreen.ts`, `Constants.ts`, `index.html`
+- **Zero new npm dependencies** — all touch handling uses vanilla JS DOM touch events
+
+### Architecture
+- Adapter pattern: `InputAdapter` interface implemented by both `InputManager` (desktop) and `TouchInputAdapter` (mobile)
+- Mobile detection: `'ontouchstart' in window` or `navigator.maxTouchPoints > 0`
+- On mobile: TouchInputAdapter creates DOM overlay with virtual joystick (left half), camera touch-drag (right half), fire button (lower-right), jump button (lower-left)
+- Desktop: completely unchanged — no touch elements in DOM, Pointer Lock still works
+- iOS Safari prevention: viewport meta with `user-scalable=no`, CSS `overscroll-behavior: none`, non-passive `touchmove`
+
+### Verification
+- Desktop: `npm run dev`, confirm WASD + mouse look + Shift sprint + Space jump all work
+- Mobile: Open on iPhone/Android, confirm touch controls appear and game is playable
