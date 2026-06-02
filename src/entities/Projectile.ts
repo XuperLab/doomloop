@@ -13,8 +13,13 @@ export class Projectile extends Entity {
   direction: THREE.Vector3;
   lifetime: number;
 
+  // AoE properties
+  areaDamage?: number;
+  areaRadius?: number;
+  hitCallback?: (hitPoint: THREE.Vector3, hitEntity?: Entity) => void;
+
   private physicsWorld: PhysicsWorld;
-  private trail: THREE.Sprite | null = null;
+  private wasHit = false;
 
   constructor(
     position: THREE.Vector3,
@@ -25,7 +30,10 @@ export class Projectile extends Entity {
     lifetime: number,
     radius: number = PLASMA_PROJECTILE_RADIUS,
     physicsWorld: PhysicsWorld,
-    color: number = 0x44ddff
+    color: number = 0x44ddff,
+    areaDamage?: number,
+    areaRadius?: number,
+    hitCallback?: (hitPoint: THREE.Vector3, hitEntity?: Entity) => void
   ) {
     super();
 
@@ -35,16 +43,15 @@ export class Projectile extends Entity {
     this.owner = owner;
     this.direction = direction.normalize();
     this.lifetime = lifetime;
+    this.areaDamage = areaDamage;
+    this.areaRadius = areaRadius;
+    this.hitCallback = hitCallback;
 
     // Visual — glowing sphere
     const geo = new THREE.SphereGeometry(radius, 6, 6);
     const mat = new THREE.MeshBasicMaterial({ color });
     this.mesh = new THREE.Mesh(geo, mat);
     this.mesh.position.copy(position);
-
-    // Energy glow effect via point light (small) or emissive sprite
-    // Use a simple glow sprite if available, otherwise just the mesh is fine
-    // For simplicity, we skip the sprite in Sprint 1
 
     // Physics body
     const bodyShape = new CANNON.Sphere(radius);
@@ -54,12 +61,12 @@ export class Projectile extends Entity {
       [position.x, position.y, position.z],
       owner === 'player' ? COLLISION_GROUPS.PLAYER_PROJECTILE : COLLISION_GROUPS.BOSS_PROJECTILE,
       owner === 'player'
-        ? COLLISION_GROUPS.ARENA | COLLISION_GROUPS.ENEMIES
+        ? COLLISION_GROUPS.ARENA | COLLISION_GROUPS.ENEMIES | COLLISION_GROUPS.FLYER
         : COLLISION_GROUPS.PLAYER | COLLISION_GROUPS.ARENA
     );
     (this.body as any).userData = { entity: this };
     this.body.sleepSpeedLimit = 0;
-    this.body.sleepTimeLimit = 999; // Don't sleep
+    this.body.sleepTimeLimit = 999;
 
     physicsWorld.addBody(this.body);
   }
@@ -86,7 +93,23 @@ export class Projectile extends Entity {
     );
   }
 
+  /** Called by collision system when projectile hits something */
   onHit(): void {
+    if (this.wasHit) return;
+    this.wasHit = true;
+    const hitPos = this.mesh.position.clone();
+    if (this.hitCallback) {
+      this.hitCallback(hitPos, undefined);
+    }
+    this.isAlive = false;
+  }
+
+  takeDamage(_amount: number): void {
+    // Projectiles don't take damage, they're destroyed on contact
+    this.onHit();
+  }
+
+  die(): void {
     this.isAlive = false;
   }
 

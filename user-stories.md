@@ -1,257 +1,267 @@
-# User Stories — Doomloop Sprint 3 (iPhone Touch Control Polish)
+# User Stories — Doomloop Sprint 4 (Audio, Weapons, Gameplay Depth, Scenes)
 
-## Epic 1: iOS Safe Area & Viewport Rendering
+## Epic A: Audio & Atmosphere
 
-> *Touch controls must render correctly on every iPhone, regardless of notch, Dynamic Island, or home indicator.*
+> *"The game should sound as good as it looks — every action has a satisfying audio response."*
 
-### US-01: Safe Area Respect
-**As a** player on iPhone 14/15 (notch/Dynamic Island),  
-**I want** the joystick, fire button, and jump button to not overlap the notch or Dynamic Island,  
-**So that** I can access all controls without obstruction.
-
-**Acceptance:** All touch control DOM elements use `env(safe-area-inset-*)` CSS variables for positioning. On an iPhone 15 Pro Max in portrait, the fire button in the bottom-right has at least 34px (`env(safe-area-inset-right)` + padding) from screen edge, and joystick has at least 34px from bottom screen edge (`env(safe-area-inset-bottom)` + padding). On iPhone SE (no notch), safe-area-inset values default to 20px.
-
----
-
-### US-02: Home Indicator Avoidance
-**As a** player on iPhone X or later,  
-**I want** the fire button to not overlap the home indicator bar at the bottom of the screen,  
-**So that** I don't accidentally trigger home gesture while trying to shoot.
-
-**Acceptance:** Fire button and jump button have at least `env(safe-area-inset-bottom)` + 10px clearance from the bottom of the screen. On edge-to-edge iPhones, this means minimum 44px (34px safe area + 10px padding) from the visible bottom edge.
-
----
-
-### US-03: Safe Area Landscape
-**As a** player playing in landscape orientation on iPhone,  
-**I want** touch controls to reposition correctly so they avoid the notch area (which is on the left or right edge in landscape),  
-**So that** I can play without controls being hidden by the notch.
-
-**Acceptance:** In landscape on iPhone 14, the notch is on the left edge. The joystick (bottom-left) must have at least `env(safe-area-inset-left)` clearance. In landscape on iPhone 15 Pro Max, the Dynamic Island is on the top edge — controls at the bottom are unaffected by top insets. Both cases verified.
-
----
-
-### US-04: 300ms Delay Elimination
-**As a** mobile gamer,  
-**I want** the fire button to fire the instant I touch it,  
-**So that** the game feels responsive and snappy like a native app.
-
-**Acceptance:** `touch-action: manipulation` is applied to `<html>` and all interactive elements. Time from `touchstart` to state change is consistently < 50ms (measured via `performance.now()` instrumentation). No perceptible delay between touching fire button and seeing the projectile fire.
-
----
-
-### US-05: Address Bar Resize Stability
-**As a** player who scrolls up/down on the page (causing the iOS Safari address bar to hide/show),  
-**I want** the game canvas and touch controls to stay correctly positioned,  
-**So that** I don't lose my place or find controls have shifted.
-
-**Acceptance:** The `window.visualViewport` resize event handler recalculates control positions within 100ms. On address bar collapse (visual viewport height increases), controls maintain their relative screen positions. On address bar show (visual viewport height decreases), controls shift up to stay visible. Canvas resizes correctly to fill the new visual viewport.
-
----
-
-## Epic 2: iOS Gesture Suppression
-
-> *No iOS Safari gestures should interrupt gameplay.*
-
-### US-06: Swipe-Back Prevention
-**As a** player dragging my finger left-to-right to aim (camera drag),  
-**I want** iOS Safari to not interpret this as a "swipe back" gesture,  
-**So that** I can aim freely without being navigated away from the game.
-
-**Acceptance:** `touchmove.preventDefault()` on the camera drag zone and document level blocks iOS swipe-back/forward navigation. Verified on iPhone by dragging left-to-right across the right half (camera zone) — no navigation action occurs. The back-swipe gesture from the very left edge of the screen is still suppressed.
-
----
-
-### US-07: Pull-to-Refresh Prevention
-**As a** player moving the joystick upward (which creates downward scroll momentum),  
-**I want** the page to not refresh due to pull-to-refresh,  
-**So that** my game session continues uninterrupted.
-
-**Acceptance:** `overscroll-behavior: none` on `<body>` and `position: fixed` on `<html>` prevent iOS Safari pull-to-refresh. Verified by aggressively scrolling past the top of the viewport in-game — no refresh or bounce occurs.
-
----
-
-### US-08: Long-Press Context Menu Prevention
-**As a** player holding the fire button for continuous fire,  
-**I want** iOS Safari to not show the text selection / copy-paste context menu,  
-**So that** I can hold the fire button without interruption.
-
-**Acceptance:** `-webkit-touch-callout: none` and `user-select: none` are applied to all touch control elements and the canvas. Verified by long-pressing the fire button for 3+ seconds — no context menu, no text selection, no popup.
-
----
-
-## Epic 3: Haptic Feedback
-
-> *Subtle vibrations make the game feel more immersive on mobile.*
-
-### US-09: Haptic on Fire
-**As a** mobile player,  
-**I want** a subtle vibration when I press the fire button,  
-**So that** I get tactile confirmation that my shot registered.
-
-**Acceptance:** `navigator.vibrate(20)` fires on each `touchstart` of the fire button (subject to the weapon's fire rate — no haptic if weapon is on cooldown). Vibration is imperceptible in noisy environments but provides a tactile cue when the phone is held.
-
----
-
-### US-10: Haptic on Hit
-**As a** mobile player,  
-**I want** a slightly stronger vibration when my shot hits an enemy,  
-**So that** I feel the impact even if I'm not looking at the hit marker.
-
-**Acceptance:** `navigator.vibrate(50)` fires when a player projectile collides with an enemy (Imps and Boss). This is in addition to the existing visual hit marker. Haptic fires once per hit, not per projectile.
-
----
-
-### US-11: Haptic on Damage
-**As a** mobile player,  
-**I want** a strong vibration when I take damage,  
-**So that** I'm immediately aware I'm being hit even if I'm looking away from the screen.
-
-**Acceptance:** `navigator.vibrate(100)` fires when the player's `takeDamage()` is called. Combined with the existing damage flash visual effect. One haptic pulse per damage event (Imp contact, boss projectile).
-
----
-
-### US-12: Haptic Toggle
-**As a** player who dislikes haptic feedback or is on a device where vibration is annoying,  
-**I want** to turn off haptic feedback from the settings panel,  
-**So that** I can play without unwanted vibrations.
-
-**Acceptance:** Settings panel has a "Haptic Feedback" toggle. When off, no `navigator.vibrate()` calls are made. When on, vibration patterns fire as described. Setting persists across page refreshes via localStorage. Default value: ON.
-
----
-
-### US-13: Haptic Graceful Fallback
-**As a** player on a device without vibration support (iPad, or Battery Saver mode),  
-**I want** the game to never throw errors or crash due to haptic API calls,  
-**So that** the game works normally on all devices.
-
-**Acceptance:** All `navigator.vibrate()` calls are wrapped in a null-check and try/catch. No console errors from vibration API on unsupported devices. Game logic is unaffected.
-
----
-
-## Epic 4: Configurable Touch Settings
-
-> *Players have different hand sizes, accuracy, and preferences — let them tune.*
-
-### US-14: Dead Zone Adjustment
-**As a** player with a heavy thumb or imprecise touch,  
-**I want** to increase the joystick dead zone so accidental micro-movements don't move me,  
-**So that** I can stand still when I intend to.
-
-**Acceptance:** Settings panel provides a slider for joystick dead zone (range 4–20px, default 8px). Changes take effect immediately (next `touchmove` frame). Setting persists in localStorage. At maximum dead zone (20px), a light resting thumb does not trigger movement. At minimum (4px), the joystick is highly sensitive.
-
----
-
-### US-15: Camera Sensitivity Adjustment
-**As a** player who prefers faster or slower camera movement,  
-**I want** to adjust the camera drag sensitivity,  
-**So that** I can aim at my preferred speed.
-
-**Acceptance:** Settings panel provides a slider for camera sensitivity (range 0.004–0.016 rad/px, default 0.008). Changes take effect immediately (next `touchmove` delta calculation). Setting persists in localStorage. At maximum sensitivity, a 100px drag turns ~90 degrees. At minimum, a 100px drag turns ~23 degrees.
-
----
-
-### US-16: Settings Persistence
-**As a** returning player,  
-**I want** the game to remember my touch settings (dead zone, sensitivity, haptics) from my last session,  
-**So that** I don't have to re-tune every time I play.
-
-**Acceptance:** All three settings (dead zone, sensitivity, haptics) are serialized to localStorage under the key `doomloop_touch_settings` (consuming the existing `TouchSettings` interface). On game init, these values are loaded and applied. If no saved settings exist, defaults are used (dead zone: 8px, sensitivity: 0.008 rad/px, haptics: on). Settings are read once on `Game.init()`.
-
----
-
-### US-17: Settings Panel Access
-**As a** player mid-game,  
-**I want** to open and close the touch settings panel without pausing or restarting,  
-**So that** I can experiment with different sensitivity values while fighting.
-
-**Acceptance:** A small gear icon (16x16px, semi-transparent) is fixed at the top-right of the screen (within safe area). Tap opens a touch settings overlay. Changes apply in real-time. Tapping outside the overlay or tapping a close button dismisses it. Settings panel does not pause game logic (but is semi-transparent so gameplay is partially visible behind it).
-
----
-
-## Epic 5: Visual Feedback Enhancement
-
-> *Buttons should communicate their state clearly without the player looking away.*
-
-### US-18: Fire Button Ripple Effect
-**As a** mobile player,  
-**I want** a visual ripple to spread from my touch point when I press fire,  
-**So that** I have clear visual confirmation the button registered my touch.
-
-**Acceptance:** On `touchstart` of the fire button, a CSS-animated ripple effect (radial gradient circle expanding from touch point, fading over 300ms) appears on the button. Multiple rapid taps create overlapping ripples. The effect is pure CSS/HTML (no canvas drawing).
-
----
-
-### US-19: Jump Button Readiness Glow
-**As a** mobile player,  
-**I want** the jump button to have a subtle pulsing glow when it's available to press,  
-**So that** I can quickly find it by peripheral vision.
-
-**Acceptance:** The jump button has a subtle pulsing glow animation (`box-shadow` pulsing on a 1.5s sine wave) in its idle state. When pressed, the glow intensifies briefly then normalizes. The glow is green-tinted to match the button's color scheme.
-
----
-
-### US-20: Stronger Active State Feedback
-**As a** player holding the fire button for continuous fire,  
-**I want** the button to clearly show it's in an "active-hold" state,  
-**So that** I know it's still firing without looking at the crosshair.
-
-**Acceptance:** Three visual states: (a) idle — opacity 0.4, no scaling, (b) pressed (initial touch) — opacity 1.0, scale 0.85, no glow, (c) active-hold (after 300ms of continuous fire-hold) — opacity 0.8, scale 0.9, subtle pulse animation on the border. All states use CSS transitions (0.1s ease for instant feedback).
-
----
-
-## Epic 6: Sprint 2 Hotfix Verification
-
-> *Confirm all previously fixed bugs remain fixed.*
-
-### US-21: Mobile Detection Accuracy
-**As a** player on a touch-capable laptop (e.g., MacBook with Touch Bar, Windows laptop with touch screen),  
-**I want** the game to use desktop controls (WASD + mouse) not mobile controls,  
-**So that** I can play the way I expect on a laptop.
-
-**Acceptance:** On a touch-capable laptop with screen width > 1024px and `pointer: fine`, `isTouchDevice()` returns `false`. The game uses `InputManager` (pointer lock + keyboard). No touch-control DOM is created. This is the hotfix from Sprint 2 commit 01ba096 — must remain working.
-
----
-
-### US-22: Desktop WASD Control
-**As a** desktop player,  
-**I want** WASD movement to work the same as in Sprint 1,  
-**So that** my desktop gameplay is unaffected by mobile changes.
-
-**Acceptance:** On desktop (no touch, pointer lock), `W/A/S/D` keys move the player forward/backward/strafe. Shift sprints. Space jumps. Mouse look works. `R` restarts. No regressions from Sprint 1 baseline.
-
----
-
-### US-23: Enemy Non-Overlap
+### US-A01: Weapon Shooting Sounds
 **As a** player,  
-**I want** enemies (Imps, Boss) to not clip through or overlap each other,  
-**So that** the game looks and feels physically correct.
+**I want** each weapon to make a distinct and satisfying sound when I fire it,  
+**So that** I can identify which weapon I'm using by sound alone and feel the impact of each shot.
 
-**Acceptance:** Imps and Boss have collision bodies with correct collision group masks (`ENEMIES: 0x004`). Enemy bodies collide with each other and push apart without teleporting or overlapping. Verified with 10 Imps active simultaneously.
-
----
-
-### US-24: Death from Imp Contact
-**As a** player at low health,  
-**I want** to die when an Imp touches me and I have 10 or fewer HP remaining,  
-**So that** the game-over flow triggers correctly from contact damage.
-
-**Acceptance:** An Imp contact with `IMP_CONTACT_DAMAGE = 10` triggers `player.takeDamage(10)`. If player HP drops to 0, `triggerPlayerDeath()` fires correctly. Death screen appears after death animation completes (~1.2s). This was the Sprint 2 hotfix bug — must remain working.
+**Acceptance:** Plasma Rifle emits a zap/energy pulse, Shotgun a heavy boom, SMG a rapid crackle, Rocket Launcher a whoosh + delayed explosion. All sounds play within 50ms of fire trigger. Sounds are synthesized via Web Audio API.
 
 ---
 
-### US-25: Death Animation
-**As a** player who dies,  
-**I want** the camera to tilt up toward the sky with a slight roll over 1.2 seconds,  
-**So that** the death has visual drama and provides feedback that I died.
+### US-A02: Enemy Sounds (Hurt & Death)
+**As a** player fighting multiple enemy types,  
+**I want** each enemy type to make distinct sounds when hurt and when dying,  
+**So that** I get audio feedback on my hits and can tell when enemies are defeated without looking at them.
 
-**Acceptance:** On death, the camera smoothly rotates 60 degrees upward (pitch) with 10 degrees of roll over 1.2 seconds. Player can still see the death screen after the animation completes. No instant cut to black.
+**Acceptance:** Each enemy type (Imp, Boss, Shooter Imp, Exploder, Flyer) has a unique hurt sound (on projectile hit) and death sound (on health reaching 0). Sound is audible from the enemy's position (stereo panning based on in-game position).
 
 ---
 
-### US-26: Lighting Correctness
-**As a** player entering the arena,  
-**I want** the environment to be well-lit enough to see enemies and navigate,  
-**So that** gameplay is not hampered by a dim or flat scene.
+### US-A03: Boss Entrance Roar
+**As a** player reaching Wave 5,  
+**I want** the boss to announce its arrival with a dramatic roar,  
+**So that** I feel the tension and significance of the boss fight.
 
-**Acceptance:** AmbientLight at intensity 1.2 with color 0x667799. DirectionalLight at 2.0 from (10, 20, 10). HemisphereLight at 0.8. Fog at distance 40–80. Arena walls, floor, pillars, and enemies are all clearly visible from the center spawn point with these lighting values.
+**Acceptance:** On boss spawn, a ~2-second distinctive roar plays. Camera shakes briefly (intensity 0.2, duration 0.5s). HUD flashes "BOSS INCOMING" text for 1.5s. The roar is louder and more dramatic than normal boss sounds.
+
+---
+
+### US-A04: Background Music Intensifying
+**As a** player progressing through waves,  
+**I want** the background music to become more intense as waves advance,  
+**So that** I feel the escalating tension and my heart rate rises with the difficulty.
+
+**Acceptance:** Wave 1: dark drone ambient. Each subsequent wave adds a new layer (percussion, bass, melody, full intensity on wave 5). Music transitions smoothly between waves (0.5s crossfade). All layers synthesized via Web Audio API oscillators.
+
+---
+
+### US-A05: Footstep Sounds
+**As a** player moving through the arena,  
+**I want** to hear my character's footsteps at a rate matching my speed,  
+**So that** the movement feels grounded and immersive.
+
+**Acceptance:** Footsteps play at ~2/sec walking, ~3/sec sprinting. No footsteps when standing still or in air. Sound is a low-impact synthesized thud (short noise burst + low-pass filter). Not audible to enemies (player-only sound).
+
+---
+
+### US-A06: Bullet Impact Sounds
+**As a** player firing at enemies and walls,  
+**I want** to hear when my shots connect with enemies or hit the environment,  
+**So that** I get audio confirmation of hits, helping me aim.
+
+**Acceptance:** Enemy impact: sharp crack/meaty thud. Wall impact: dull thud with spark-like high-end. Explosions: loud deep boom with reverb tail. Rocket Launcher splash damage plays a distinct explosion sound.
+
+---
+
+### US-A07: Volume Controls
+**As a** player who wants to control the game's audio,  
+**I want** to adjust Master, SFX, and Music volume independently from the settings panel,  
+**So that** I can find a comfortable audio balance or play silently.
+
+**Acceptance:** Settings panel (accessible from gear icon) has three sliders: Master (0-100%, default 100%), SFX (0-100%, default 80%), Music (0-100%, default 50%). Master multiplies both SFX and Music. Changes apply immediately. Persisted to localStorage. Works on both desktop and mobile.
+
+---
+
+### US-A08: Audio Autoplay Compliance
+**As a** browser user,  
+**I want** the game to not play any audio until I've clicked or tapped the screen,  
+**So that** I'm not surprised by sudden sound, and the browser doesn't block audio playback.
+
+**Acceptance:** AudioContext is created on first user interaction (click/tap on start screen). No Web Audio API calls before interaction. AudioManager is in "suspended" state until explicitly resumed. AudioContext state transitions are logged in development mode.
+
+---
+
+## Epic B: Weapon System
+
+> *"Four distinct weapons with unique play styles, satisfying to switch between, with resource management via ammo."*
+
+### US-B01: Multiple Weapons
+**As a** player who has mastered the Plasma Rifle,  
+**I want** to use a Shotgun, SMG, and Rocket Launcher with unique behaviors,  
+**So that** I can choose the right tool for each combat situation.
+
+**Acceptance:** Shotgun fires 5-8 pellet spread (15° cone), SMG fires rapid single projectiles (8/sec), Rocket Launcher fires slow explosive projectile. Each weapon has unique damage, fire rate, spread, and ammo values.
+
+---
+
+### US-B02: Weapon Switching — Desktop
+**As a** desktop player,  
+**I want** to switch weapons using number keys 1-4 and the mouse wheel,  
+**So that** I can quickly adapt to changing combat needs.
+
+**Acceptance:** Keys 1-4 select Plasma Rifle, Shotgun, SMG, Rocket Launcher respectively. Mouse wheel scroll switches to next/previous weapon. Switch has 0.3s delay (cannot fire during switch). Current weapon is highlighted in weapon bar HUD.
+
+---
+
+### US-B03: Weapon Switching — Mobile
+**As a** mobile player,  
+**I want** to tap weapon icons in a weapon bar to switch weapons,  
+**So that** I can change weapons during combat on a touch-only interface.
+
+**Acceptance:** Weapon bar appears above fire button showing up to 4 weapon icons. Tap to switch. Current weapon highlighted. Bar fades to low opacity after 2s idle, reappears on tap in weapon bar zone. Same 0.3s switch delay as desktop.
+
+---
+
+### US-B04: Weapon Pickups
+**As a** player starting a new game,  
+**I want** to find and collect weapon pickups scattered around the arena,  
+**So that** I can expand my arsenal beyond the starting Plasma Rifle.
+
+**Acceptance:** Each arena has 2-3 weapon pickup spawner positions. Walk over the spawner to collect the weapon (or ammo if already owned). Spawners show floating weapon icon. Respawn after 15 seconds. New weapons are immediately available.
+
+---
+
+### US-B05: Ammo System
+**As a** player,  
+**I want** each weapon to have limited ammo that I must manage,  
+**So that** I need to think strategically about when to use each weapon and seek ammo pickups.
+
+**Acceptance:** Each weapon has a max ammo count: Plasma Rifle = 40, Shotgun = 12, SMG = 60, Rocket Launcher = 6. Ammo decrements on fire. Weapon cannot fire when ammo = 0. Ammo pickups restore ammo. Switching to empty weapon shows "No ammo" indicator.
+
+---
+
+### US-B06: Ammo Pickups
+**As a** player running low on ammo mid-wave,  
+**I want** ammo pickups to spawn in the arena,  
+**So that** I can replenish my weapons and stay in the fight.
+
+**Acceptance:** Small ammo pickups spawn every 3 enemy kills. Large ammo pickup spawns on wave intermission. Pickups glow and float. Walk over to collect. Small: +15 SMG / +5 Shotgun / +3 Rocket / +20 Plasma. Large: fills all weapons to 50% max.
+
+---
+
+### US-B07: Weapon HUD
+**As a** player,  
+**I want** to see my current weapon, ammo counts, and available weapons at all times,  
+**So that** I can make informed decisions about weapon switching and reload strategy.
+
+**Acceptance:** Bottom-center HUD shows weapon icons for all owned weapons. Current weapon highlighted. Ammo counter below each icon. Out-of-ammo weapon icon dimmed. Crosshair adapts to current weapon (Shotgun: wider cross, SMG: tight cluster, Rocket: large circle). All renders within HUD overlay.
+
+---
+
+## Epic C: Gameplay Depth
+
+> *"The game becomes richer — power-ups, scoring, combos, difficulty tiers, and varied enemies create meaningful choices and replayability."*
+
+### US-C01: Power-Ups
+**As a** player in combat,  
+**I want** power-ups to occasionally spawn in the arena that give me temporary advantages,  
+**So that** I get exciting moments of empowerment and strategic choices about when to grab them.
+
+**Acceptance:** Power-ups spawn one at a time (at wave start). 4 types: Speed Boost (blue, 50% speed for 8s), Double Damage (red, 2x damage for 8s), Shield (white, invulnerable for 6s), Health Pack (green, heal 40 HP). Visual: glowing floating orbs with color. 10s respawn after collection.
+
+---
+
+### US-C02: Score & Combo System
+**As a** competitive player,  
+**I want** my kills to be scored with a combo multiplier for rapid consecutive kills,  
+**So that** I'm rewarded for aggressive, skillful play — and want to beat my high score.
+
+**Acceptance:** Points per kill: Imp=100, Shooter Imp=150, Exploder=200, Flyer=300, Boss=1000. Kill within 2s of last kill: combo multiplier increases (max 10x). Score = base × multiplier. Combo timer bar shows remaining window. High score saved to localStorage.
+
+---
+
+### US-C03: Kill Streak Callouts
+**As** a player building a combo,  
+**I want** exciting callout text to appear on screen at streak milestones,  
+**So that** I feel recognized and motivated to push for higher combos.
+
+**Acceptance:** Combo 2 = "Double Kill!", 3 = "Triple Kill!", 4 = "Multi Kill!", 5 = "RAMPAGE!", 7 = "DOMINATION!", 10 = "GODLIKE!". Callout animates center-screen (scale 0.8→1.2→1.0, 1.5s). Distinct sound plays each tier.
+
+---
+
+### US-C04: Difficulty Selection
+**As a** player of any skill level,  
+**I want** to choose Easy, Normal, or Hard difficulty before starting,  
+**So that** I can tailor the challenge to my ability or mood.
+
+**Acceptance:** Start screen shows 3 buttons. Easy: 0.7x enemy health, 0.5x enemy damage, standard wave count, 10s power-ups, 0.8x score. Normal: 1.0x all, 8s power-ups, 1.0x score. Hard: 1.5x enemy health/damage, +25% enemies, 5s power-ups, 1.5x score.
+
+---
+
+### US-C05: Shooter Imp Enemy
+**As a** player,  
+**I want** to face a ranged enemy that fires projectiles from a distance,  
+**So that** I can't just kite backward — I need to dodge and close the gap.
+
+**Acceptance:** Shooter Imp has 3 HP. Stays 8-15 units from player. Fires energy projectile (speed 20, damage 8) every 1.5s. AI: run to range → aim → fire → reposition. Appearance: Imp with arm-cannon.
+
+---
+
+### US-C06: Exploder Enemy
+**As a** player,  
+**I want** to face a high-risk, high-reward enemy that charges and self-destructs,  
+**So that** I need to prioritize it as a threat and use positioning to avoid the blast.
+
+**Acceptance:** Exploder has 2 HP. Charges at 1.3x player sprint speed. Explodes in 4-unit radius (20 damage player, 5 damage other enemies). Glows brighter yellow as it gets closer. Hisses louder approaching. Killed before reaching player: still explodes but less damage (10). Drops no ammo.
+
+---
+
+### US-C07: Flyer Enemy
+**As a** player used to ground-based combat,  
+**I want** to face an aerial enemy that swoops down to attack,  
+**So that** I have to watch the sky and lead my shots against a moving target.
+
+**Acceptance:** Flyer has 4 HP. Hovers at height 6-10 units. Flight path: sine wave horizontal movement toward player. Dive attack: drops down when within 5 units (12 contact damage). 3s dive cooldown. Appearance: bat-like or floating skull mesh.
+
+---
+
+## Epic D: Scene & Visual
+
+> *"Three unique arenas, portal transitions, particle effects, mini-map, and interactive elements make each run feel like an adventure."*
+
+### US-D01: Three Unique Arenas
+**As a** returning player,  
+**I want** to play in visually different arenas (Stone Fortress, Lava Cavern, Void Nexus),  
+**So that** each play session feels fresh and I look forward to seeing which arena comes next.
+
+**Acceptance:** Stone Fortress (40x40, grey stone, warm light, torch-like ambiance). Lava Cavern (45x45, dark rock, red glow, lava cracks). Void Nexus (50x50, purple/black cosmic, star floor, crystalline pillars). Each has unique color palette, lighting, fog, and pillar types.
+
+---
+
+### US-D02: Portal Transitions
+**As a** player who has completed an arena,  
+**I want** to walk through a portal that transitions me to the next arena,  
+**So that** I experience a smooth, visually impressive journey between distinct environments.
+
+**Acceptance:** After 5 waves completed in current arena, a glowing portal appears. Walking into it triggers: fade to white (0.5s) → portal visual → load next arena → fade in (0.5s). Health, weapons, ammo, and score persist. Enemies reset for new wave set.
+
+---
+
+### US-D03: Enhanced Particle Effects
+**As a** player firing weapons and killing enemies,  
+**I want** to see satisfying particle effects (muzzle flash, explosions, shell casings, death bursts),  
+**So that** the action feels punchy and visually spectacular.
+
+**Acceptance:** Muzzle flash per weapon (blue/white/red/orange). Explosions (20-40 particles, 0.5s fade, dynamic light). Shell casings (physics bodies ejected per shot, despawn after 5s). Death burst (colored particle burst on enemy death). All particles must not drop frame rate below 30 FPS on mobile.
+
+---
+
+### US-D04: Mini-Map
+**As a** player navigating a large arena,  
+**I want** a mini-map in the corner showing arena layout, my position, enemies, and pickups,  
+**So that** I can orient myself and plan my movement even while looking at the action.
+
+**Acceptance:** 120x120px (desktop), 80x80px (mobile), top-right corner. HTML5 Canvas overlay. Shows: arena rectangle, player dot (centered), enemy dots (red), pickup dots (colored), portal (glowing circle). Updated every frame. Does not overlap touch controls or HUD.
+
+---
+
+### US-D05: Trap Zones
+**As a** player moving through the arena,  
+**I want** to encounter interactive trap zones that add environmental danger,  
+**So that** positioning matters more and arenas feel alive.
+
+**Acceptance:** 2-4 traps per arena. Stone Fortress: pressure plate → wall spikes (15 damage). Lava Cavern: geyser vents (15 damage + knockback). Void Nexus: gravity wells (50% slow, 3s). Traps affect both player and enemies. Visual indicator (floor glow/pulse). 5s reset cooldown.
+
+---
+
+### US-D06: Supply Stations
+**As a** player running low on health and ammo,  
+**I want** to find a supply station I can activate once per wave,  
+**So that** I have a strategic fallback point when things get desperate.
+
+**Acceptance:** One supply station per arena. Glowing terminal/crystal. Press E (desktop) or on-screen button (mobile) to activate. Full ammo refill + 25 HP heal. Once per wave cooldown. Green checkmark when available. Grey/dim when on cooldown.

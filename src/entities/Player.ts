@@ -4,7 +4,11 @@ import { Entity } from './Entity';
 import { Camera } from '../engine/Camera';
 import { InputState } from '../engine/InputManager';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
+import { Weapon } from '../weapons/Weapon';
 import { PlasmaRifle } from '../weapons/PlasmaRifle';
+import { Shotgun } from '../weapons/Shotgun';
+import { SMG } from '../weapons/SMG';
+import { RocketLauncher } from '../weapons/RocketLauncher';
 import {
   PLAYER_MAX_HEALTH,
   PLAYER_WALK_SPEED,
@@ -17,6 +21,8 @@ import {
   PLAYER_HEIGHT,
   COLLISION_GROUPS,
   COLORS,
+  FOOTSTEP_WALK_INTERVAL,
+  FOOTSTEP_SPRINT_INTERVAL,
 } from '../utils/Constants';
 
 export class Player extends Entity {
@@ -26,7 +32,22 @@ export class Player extends Entity {
   maxHealth = PLAYER_MAX_HEALTH;
   grounded = false;
   isSprinting = false;
-  weapon: PlasmaRifle;
+
+  // Sprint 4: Weapon system (replaces single weapon)
+  weapons: Weapon[] = [];
+  currentWeaponIndex = 0;
+  get currentWeapon(): Weapon {
+    return this.weapons[this.currentWeaponIndex];
+  }
+
+  // Sprint 4: Power-up state
+  speedMultiplier = 1.0;
+  damageMultiplier = 1.0;
+  isInvulnerable = false;
+
+  // Sprint 4: Footstep audio
+  footstepTimer = 0;
+
   private camera: Camera;
   private physicsWorld: PhysicsWorld;
   private currentSpeed = 0;
@@ -35,81 +56,77 @@ export class Player extends Entity {
     super();
     this.camera = camera;
     this.physicsWorld = physicsWorld;
-    this.weapon = new PlasmaRifle(camera, physicsWorld, this);
 
-    // Visual mesh — capsule-like (cylinder + sphere cap)
+    // Sprint 4: Start with PlasmaRifle
+    this.weapons.push(new PlasmaRifle(camera.camera, physicsWorld, this));
+    this.currentWeaponIndex = 0;
+
+    // Visual mesh
     const geo = new THREE.CylinderGeometry(PLAYER_RADIUS, PLAYER_RADIUS, PLAYER_HEIGHT, 8);
     const mat = new THREE.MeshStandardMaterial({
       color: 0x3366cc,
       flatShading: true,
       transparent: true,
-      opacity: 0, // Invisible first-person — visible for debugging
+      opacity: 0,
     });
     this.mesh = new THREE.Mesh(geo, mat);
-    // In first-person, the player model is invisible; weapon is visible
     this.mesh.visible = false;
 
-    // Physics body — cylinder shape
+    // Physics body
     this.body = physicsWorld.createDynamicBody(
       new CANNON.Cylinder(PLAYER_RADIUS, PLAYER_RADIUS, PLAYER_HEIGHT, 8),
-      80, // 80kg mass
+      80,
       [0, PLAYER_HEIGHT / 2, 0],
       COLLISION_GROUPS.PLAYER,
-      COLLISION_GROUPS.ARENA | COLLISION_GROUPS.ENEMIES | COLLISION_GROUPS.HEALTH_PACK | COLLISION_GROUPS.BOSS_PROJECTILE
+      COLLISION_GROUPS.ARENA | COLLISION_GROUPS.ENEMIES | COLLISION_GROUPS.HEALTH_PACK |
+        COLLISION_GROUPS.BOSS_PROJECTILE | COLLISION_GROUPS.FLYER |
+        COLLISION_GROUPS.POWER_UP | COLLISION_GROUPS.AMMO_PICKUP | COLLISION_GROUPS.WEAPON_PICKUP
     );
-    this.body.fixedRotation = true; // Prevent player from tipping over
+    this.body.fixedRotation = true;
     this.body.updateMassProperties();
     this.body.linearDamping = 0.0;
-
-    // Store reference for collision dispatch
     (this.body as any).userData = { entity: this };
-
     physicsWorld.addBody(this.body);
   }
 
   update(dt: number): void {
     if (!this.isAlive) return;
-    // Movement is driven externally by Game.ts which calls applyMovement & look
+    // Tick weapon cooldowns
+    for (const w of this.weapons) {
+      w.update(dt);
+    }
   }
 
-  /** Apply movement from input state */
   applyMovement(input: InputState, dt: number): void {
     if (!this.isAlive) return;
 
     this.isSprinting = input.sprint;
 
-    // Get camera-relative directions (XZ plane only — no pitch influence)
     const forward = this.camera.getForwardVector();
     const right = this.camera.getRightVector();
 
-    // Compute desired movement direction
     const moveDir = new THREE.Vector3();
 
-    // Check for analog input first (Sprint 2 — TouchInputAdapter)
     if (input.moveAnalogX !== undefined && input.moveAnalogZ !== undefined) {
-      // Analog: C = forward * analogZ + right * analogX
       const fwd = forward.clone().multiplyScalar(input.moveAnalogZ);
       const rgt = right.clone().multiplyScalar(input.moveAnalogX);
       moveDir.copy(fwd.add(rgt));
     } else {
-      // Fall back to boolean directional input (Sprint 1 — desktop)
       if (input.moveForward) moveDir.add(forward);
       if (input.moveBackward) moveDir.sub(forward);
       if (input.moveLeft) moveDir.sub(right);
       if (input.moveRight) moveDir.add(right);
     }
 
-    // Normalize if moving diagonally
     if (moveDir.lengthSq() > 0) {
       moveDir.normalize();
     }
 
-    // Apply speed
-    const maxSpeed = this.isSprinting
+    // Apply speed multiplier from power-ups
+    const maxSpeed = (this.isSprinting
       ? PLAYER_WALK_SPEED * PLAYER_SPRINT_MULTIPLIER
-      : PLAYER_WALK_SPEED;
+      : PLAYER_WALK_SPEED) * this.speedMultiplier;
 
-    // Smooth acceleration/deceleration
     const isMoving = moveDir.lengthSq() > 0;
     if (isMoving) {
       this.currentSpeed = Math.min(
@@ -123,29 +140,27 @@ export class Player extends Entity {
       );
     }
 
-    // Apply velocity to physics body (maintain current Y velocity for gravity)
     const targetVel = moveDir.clone().multiplyScalar(this.currentSpeed);
     this.body.velocity.x = targetVel.x;
     this.body.velocity.z = targetVel.z;
 
-    // Jump
     if (input.jumpPressed && this.grounded) {
       this.body.velocity.y = PLAYER_JUMP_VELOCITY;
       this.grounded = false;
     }
 
-    // Update sprint state on camera
     this.camera.setSprinting(this.isSprinting);
     this.camera.setMoving(isMoving);
+
+    // Update footsteps
+    this.updateFootstep(dt, isMoving);
   }
 
-  /** Apply mouse look */
   applyLook(deltaYaw: number, deltaPitch: number): void {
     if (!this.isAlive) return;
     this.camera.rotate(deltaYaw, deltaPitch);
   }
 
-  /** Sync camera position to player body */
   syncCamera(): void {
     if (!this.isAlive) return;
     this.camera.camera.position.set(
@@ -156,16 +171,77 @@ export class Player extends Entity {
   }
 
   takeDamage(amount: number): void {
-    if (!this.isAlive) return;
-    this.health = Math.max(0, this.health - amount);
+    if (!this.isAlive || this.isInvulnerable) return;
+    const finalDamage = amount; // Difficulty scaling applied by caller
+    this.health = Math.max(0, this.health - finalDamage);
     if (this.health <= 0) {
-      this.isAlive = false;
+      this.die();
     }
+  }
+
+  die(): void {
+    this.isAlive = false;
   }
 
   heal(amount: number): void {
     if (!this.isAlive) return;
     this.health = Math.min(this.maxHealth, this.health + amount);
+  }
+
+  // Sprint 4: Weapon management
+  switchWeapon(index: number): void {
+    if (index < 0 || index >= this.weapons.length) return;
+    if (index === this.currentWeaponIndex) return;
+    this.currentWeaponIndex = index;
+  }
+
+  addWeapon(weapon: Weapon): void {
+    // Only add if not already owned
+    const exists = this.weapons.some(w => w.getName() === weapon.getName());
+    if (!exists) {
+      this.weapons.push(weapon);
+    }
+  }
+
+  refillAllAmmo(percent: number = 0.5): void {
+    for (const w of this.weapons) {
+      w.addAmmo(Math.floor(w.maxAmmo * percent));
+    }
+  }
+
+  updateFootstep(dt: number, isMoving: boolean): void {
+    if (!isMoving) return;
+    const interval = this.isSprinting ? FOOTSTEP_SPRINT_INTERVAL : FOOTSTEP_WALK_INTERVAL;
+    this.footstepTimer += dt;
+    if (this.footstepTimer >= interval) {
+      this.footstepTimer = 0;
+      // AudioManager.playSFX('footstep') is called by Game.ts
+    }
+  }
+
+  // Sprint 4: Power-up effects
+  applySpeedBoost(multiplier: number): void {
+    this.speedMultiplier = multiplier;
+  }
+
+  removeSpeedBoost(): void {
+    this.speedMultiplier = 1.0;
+  }
+
+  applyDoubleDamage(multiplier: number): void {
+    this.damageMultiplier = multiplier;
+  }
+
+  removeDoubleDamage(): void {
+    this.damageMultiplier = 1.0;
+  }
+
+  applyShield(): void {
+    this.isInvulnerable = true;
+  }
+
+  removeShield(): void {
+    this.isInvulnerable = false;
   }
 
   reset(position?: THREE.Vector3): void {
@@ -178,6 +254,17 @@ export class Player extends Entity {
     if (position) {
       this.body.position.set(position.x, position.y, position.z);
     }
+
+    // Reset weapons to starting inventory
+    this.weapons = [];
+    this.weapons.push(new PlasmaRifle(this.camera.camera, this.physicsWorld, this));
+    this.currentWeaponIndex = 0;
+
+    // Reset power-up state
+    this.speedMultiplier = 1.0;
+    this.damageMultiplier = 1.0;
+    this.isInvulnerable = false;
+    this.footstepTimer = 0;
   }
 
   destroy(): void {

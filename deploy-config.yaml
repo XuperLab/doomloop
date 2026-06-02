@@ -1,20 +1,35 @@
-# deploy-config.yaml
-# This file is consumed by the deploy-agent to determine deployment strategy.
+# Deploy config for Doomloop — Sprint 4
+# Static Vite-built web application (Three.js + Cannon-es)
 
-project_name: doomloop
-project_path: /opt/data/workspace/projects/doomloop
+app_name: doomloop
+app_type: static-site
 build_command: npm run build
-build_output: dist/
-deployment_type: static_site
-platform: static_site  # No server runtime required
-environment: production
-env_variables: {}
-health_check: null  # Static sites don't need health checks
-notes: |
-  Doomloop Sprint 3 (iPhone Touch Control Polish) implemented.
-  All features: F01-F12 (safe area, tap delay, gesture suppression,
-  address bar resize, haptic feedback, settings panel, visual feedback,
-  help overlay, joystick visual, scroll prevention, HUD optimization).
-  Build verified: tsc --noEmit zero errors, npm run build succeeds.
-  Bundle: ~161KB gzipped total (Three.js, Cannon-es, game code).
-  Sprint 3 additions ≈ 4.6KB gzipped.
+build_output_dir: dist
+build_output_files:
+  - index.html
+  - assets/
+  - doomloop-screens/
+
+serve_static_from: dist
+
+env:
+  NODE_VERSION: "18"
+
+health_check:
+  type: http
+  path: /index.html
+  expected_status: 200
+
+post_deploy:
+  - echo "Doomloop Sprint 4 deployed — check /index.html"
+
+# If deploying to Dokploy:
+dokploy:
+  app_type: static
+  build_method: dockerfile
+  ports: []
+
+# If deploying via static-site-deployment (simple tunnel/dev server):
+static_site:
+  entry: dist/index.html
+  fallback: dist/index.html

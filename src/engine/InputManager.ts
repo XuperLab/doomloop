@@ -16,6 +16,10 @@ export interface InputState {
   // Sprint 2 additions (optional — set by TouchInputAdapter)
   moveAnalogX?: number;  // -1 (left) to +1 (right)
   moveAnalogZ?: number;  // -1 (backward) to +1 (forward)
+
+  // Sprint 4 additions
+  weaponSwitchTo?: number;  // 0-3 for weapon slot, -1 for no switch
+  interact?: boolean;       // E key or tap to interact
 }
 
 export class InputManager {
@@ -26,6 +30,7 @@ export class InputManager {
   private _jumpPressed = false;
   private _restartPressed = false;
   private _sprintHeld = false;
+  private _interactPressed = false;
   private _pointerLocked = false;
   private _onPointerLockChange: (() => void) | null = null;
   private _onPointerLockError: (() => void) | null = null;
@@ -34,6 +39,9 @@ export class InputManager {
     this.keys.set(e.code, true);
     if (e.code === 'KeyR') {
       this._restartPressed = true;
+    }
+    if (e.code === 'KeyE') {
+      this._interactPressed = true;
     }
     // Prevent space from scrolling
     if (e.code === 'Space') {
@@ -58,6 +66,10 @@ export class InputManager {
     }
   };
 
+  private onWheel = (e: WheelEvent): void => {
+    // Mouse wheel for weapon switching (handled in poll)
+  };
+
   private onPointerLockChangeEvent = (): void => {
     this._pointerLocked = document.pointerLockElement !== null;
     if (this._pointerLocked) {
@@ -74,6 +86,7 @@ export class InputManager {
     document.addEventListener('keyup', this.onKeyUp);
     document.addEventListener('mousemove', this.onMouseMove);
     document.addEventListener('mousedown', this.onMouseDown);
+    document.addEventListener('wheel', this.onWheel);
     document.addEventListener('pointerlockchange', this.onPointerLockChangeEvent);
     document.addEventListener('pointerlockerror', this.onPointerLockErrorEvent);
   }
@@ -83,6 +96,7 @@ export class InputManager {
     document.removeEventListener('keyup', this.onKeyUp);
     document.removeEventListener('mousemove', this.onMouseMove);
     document.removeEventListener('mousedown', this.onMouseDown);
+    document.removeEventListener('wheel', this.onWheel);
     document.removeEventListener('pointerlockchange', this.onPointerLockChangeEvent);
     document.removeEventListener('pointerlockerror', this.onPointerLockErrorEvent);
   }
@@ -111,6 +125,13 @@ export class InputManager {
 
   /** Poll input state for current frame — resets frame-specific flags */
   poll(): InputState {
+    // Determine weapon switch from number keys
+    let weaponSwitchTo: number = -1;
+    if (this.keys.get('Digit1')) weaponSwitchTo = 0;
+    else if (this.keys.get('Digit2')) weaponSwitchTo = 1;
+    else if (this.keys.get('Digit3')) weaponSwitchTo = 2;
+    else if (this.keys.get('Digit4')) weaponSwitchTo = 3;
+
     const state: InputState = {
       moveForward: !!this.keys.get('KeyW'),
       moveBackward: !!this.keys.get('KeyS'),
@@ -122,12 +143,15 @@ export class InputManager {
       mouseDeltaX: this._mouseDeltaX * MOUSE_SENSITIVITY,
       mouseDeltaY: this._mouseDeltaY * MOUSE_SENSITIVITY,
       restart: this._restartPressed,
+      weaponSwitchTo,
+      interact: this._interactPressed,
     };
 
     // Reset frame-specific flags
     this._firePressed = false;
     this._jumpPressed = false;
     this._restartPressed = false;
+    this._interactPressed = false;
     this._mouseDeltaX = 0;
     this._mouseDeltaY = 0;
 
@@ -152,5 +176,6 @@ export class InputManager {
     this._firePressed = false;
     this._jumpPressed = false;
     this._restartPressed = false;
+    this._interactPressed = false;
   }
 }

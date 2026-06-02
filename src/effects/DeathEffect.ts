@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
+import { DeathBurst } from './DeathBurst';
 import {
   DEATH_FRAGMENT_COUNT,
   DEATH_FRAGMENT_LIFETIME,
@@ -19,38 +20,43 @@ export class DeathEffect {
   private scene: THREE.Scene;
   private physicsWorld: PhysicsWorld;
   private fragments: Fragment[] = [];
+  private deathBurst: DeathBurst;
 
   constructor(scene: THREE.Scene, physicsWorld: PhysicsWorld) {
     this.scene = scene;
     this.physicsWorld = physicsWorld;
+    this.deathBurst = new DeathBurst(scene);
   }
 
   /** Spawn imp death fragments */
   spawnImp(position: THREE.Vector3): void {
-    this.spawnFragments(
-      position,
-      COLORS.IMP,
-      DEATH_FRAGMENT_COUNT.IMP,
-      DEATH_FRAGMENT_SPEED
-    );
+    this.deathBurst.emit('imp', position);
+    this.spawnFragments(position, COLORS.IMP, DEATH_FRAGMENT_COUNT.IMP, DEATH_FRAGMENT_SPEED);
   }
 
   /** Spawn boss death explosion */
   spawnBoss(position: THREE.Vector3): void {
-    this.spawnFragments(
-      position,
-      COLORS.BOSS,
-      DEATH_FRAGMENT_COUNT.BOSS,
-      DEATH_FRAGMENT_SPEED * 1.5
-    );
+    this.deathBurst.emit('boss', position);
+    this.spawnFragments(position, COLORS.BOSS, DEATH_FRAGMENT_COUNT.BOSS, DEATH_FRAGMENT_SPEED * 1.5);
+    this.spawnFragments(position, 0xff6622, 8, DEATH_FRAGMENT_SPEED * 2);
+  }
 
-    // Also add some yellow/gold fragments for the boss
-    this.spawnFragments(
-      position,
-      0xff6622,
-      8,
-      DEATH_FRAGMENT_SPEED * 2
-    );
+  /** Spawn ShooterImp death */
+  spawnShooterImp(position: THREE.Vector3): void {
+    this.deathBurst.emit('shooter_imp', position);
+    this.spawnFragments(position, 0x88AA44, 8, DEATH_FRAGMENT_SPEED);
+  }
+
+  /** Spawn Exploder death (bigger explosion) */
+  spawnExploder(position: THREE.Vector3): void {
+    this.deathBurst.emit('exploder', position);
+    this.spawnFragments(position, 0xFF4422, 12, DEATH_FRAGMENT_SPEED * 1.3);
+  }
+
+  /** Spawn Flyer death */
+  spawnFlyer(position: THREE.Vector3): void {
+    this.deathBurst.emit('flyer', position);
+    this.spawnFragments(position, 0x8844CC, 8, DEATH_FRAGMENT_SPEED);
   }
 
   private spawnFragments(
@@ -92,16 +98,17 @@ export class DeathEffect {
   }
 
   update(dt: number): void {
+    this.deathBurst.update(dt);
+
     for (let i = this.fragments.length - 1; i >= 0; i--) {
       const f = this.fragments[i];
       f.lifetime -= dt;
-      f.velocity.y += -20 * dt; // Gravity on fragments
+      f.velocity.y += -20 * dt;
       f.mesh.position.add(f.velocity.clone().multiplyScalar(dt));
       f.mesh.rotation.x += f.angularVelocity.x * dt;
       f.mesh.rotation.y += f.angularVelocity.y * dt;
       f.mesh.rotation.z += f.angularVelocity.z * dt;
 
-      // Fade out
       const alpha = Math.max(0, f.lifetime / DEATH_FRAGMENT_LIFETIME);
       const mat = f.mesh.material;
       if (!Array.isArray(mat)) {
@@ -125,5 +132,6 @@ export class DeathEffect {
       (f.mesh.material as THREE.Material).dispose();
     }
     this.fragments.length = 0;
+    this.deathBurst.clear();
   }
 }

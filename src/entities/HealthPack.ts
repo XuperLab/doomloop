@@ -74,6 +74,15 @@ export class HealthPack extends Entity {
     this.mesh.visible = false;
   }
 
+  takeDamage(_amount: number): void {
+    // Health packs don't take damage
+    this.onConsumed();
+  }
+
+  die(): void {
+    this.isAlive = false;
+  }
+
   destroy(): void {
     this.isAlive = false;
     if (this.body) this.physicsWorld.removeBody(this.body);

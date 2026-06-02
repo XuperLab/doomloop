@@ -180,8 +180,12 @@ export class Boss extends Entity {
     (this.bodyMesh.material as THREE.MeshStandardMaterial).color.setHex(0xffffff);
 
     if (this.health <= 0) {
-      this.isAlive = false;
+      this.die();
     }
+  }
+
+  die(): void {
+    this.isAlive = false;
   }
 
   private syncMesh(): void {

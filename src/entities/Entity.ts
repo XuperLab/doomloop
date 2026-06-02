@@ -8,6 +8,10 @@ export abstract class Entity {
   isAlive = true;
   createdAt: number;
 
+  // Sprint 4: Standardized HP/MP for all entities
+  health: number = 1;
+  maxHealth: number = 1;
+
   private static nextId = 0;
 
   constructor() {
@@ -16,6 +20,12 @@ export abstract class Entity {
   }
 
   abstract update(dt: number): void;
+
+  /** Sprint 4: Standardized damage method */
+  abstract takeDamage(amount: number): void;
+
+  /** Sprint 4: Standardized death behavior */
+  abstract die(): void;
 
   /** Remove from scene + physics world (override to clean up) */
   destroy(): void {

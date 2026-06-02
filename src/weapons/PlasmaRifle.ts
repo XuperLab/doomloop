@@ -1,76 +1,54 @@
 import * as THREE from 'three';
-import { Camera } from '../engine/Camera';
+import * as CANNON from 'cannon-es';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
-import { Projectile } from '../entities/Projectile';
+import { Weapon } from './Weapon';
 import { Entity } from '../entities/Entity';
 import {
-  PLASMA_FIRE_INTERVAL,
   PLASMA_PROJECTILE_SPEED,
   PLASMA_PROJECTILE_DAMAGE,
   PLASMA_PROJECTILE_LIFETIME,
-  PLASMA_CROSSHAIR_BLOOM_RECOVERY,
   PLASMA_PROJECTILE_RADIUS,
+  WEAPON_CONFIGS,
   COLORS,
 } from '../utils/Constants';
 
-export class PlasmaRifle {
-  fireRate = PLASMA_FIRE_INTERVAL;
-  lastFireTime = 0;
-  crosshairBloom = 0;
-
-  private camera: Camera;
-  private physicsWorld: PhysicsWorld;
-  private owner: Entity;
-
-  constructor(camera: Camera, physicsWorld: PhysicsWorld, owner: Entity) {
-    this.camera = camera;
-    this.physicsWorld = physicsWorld;
-    this.owner = owner;
+export class PlasmaRifle extends Weapon {
+  constructor(
+    camera: THREE.PerspectiveCamera,
+    physicsWorld: PhysicsWorld,
+    owner: Entity,
+  ) {
+    super(camera, physicsWorld, owner, {
+      name: WEAPON_CONFIGS.plasma.name,
+      damage: WEAPON_CONFIGS.plasma.damage,
+      fireRate: WEAPON_CONFIGS.plasma.fireRate,
+      maxAmmo: WEAPON_CONFIGS.plasma.maxAmmo,
+      projectileSpeed: WEAPON_CONFIGS.plasma.projectileSpeed,
+      spreadAngle: WEAPON_CONFIGS.plasma.spreadAngle,
+      projectileCount: WEAPON_CONFIGS.plasma.projectileCount,
+      isAutomatic: WEAPON_CONFIGS.plasma.isAutomatic,
+      icon: WEAPON_CONFIGS.plasma.icon,
+    });
   }
 
-  canFire(): boolean {
-    const now = performance.now() / 1000;
-    return now - this.lastFireTime >= this.fireRate;
-  }
+  fire(playerPos: THREE.Vector3, lookDir: THREE.Vector3, scene: THREE.Scene): boolean {
+    if (!this.checkCooldown() || this.ammo <= 0) return false;
 
-  fire(): Projectile | null {
-    if (!this.canFire()) return null;
+    this.fireCooldownTimer = this.fireRate;
+    this.ammo--;
 
-    const now = performance.now() / 1000;
-    this.lastFireTime = now;
-
-    // Spawn projectile from camera position in look direction
-    const lookDir = this.camera.getLookDirection();
-    const spawnPos = this.camera.camera.position.clone();
-
-    // Offset slightly forward so it doesn't clip into the camera
-    spawnPos.add(lookDir.clone().multiplyScalar(1));
-
-    const proj = new Projectile(
+    const spawnPos = playerPos.clone().add(lookDir.clone().multiplyScalar(1));
+    const proj = this.createProjectile(
       spawnPos,
       lookDir,
       PLASMA_PROJECTILE_SPEED,
       PLASMA_PROJECTILE_DAMAGE,
-      'player',
-      PLASMA_PROJECTILE_LIFETIME,
+      COLORS.PLAYER_PROJECTILE,
       PLASMA_PROJECTILE_RADIUS,
-      this.physicsWorld,
-      COLORS.PLAYER_PROJECTILE
+      PLASMA_PROJECTILE_LIFETIME
     );
+    scene.add(proj.mesh);
 
-    // Set crosshair bloom
-    this.crosshairBloom = 1;
-
-    return proj;
-  }
-
-  update(dt: number): void {
-    // Recover crosshair bloom
-    if (this.crosshairBloom > 0) {
-      this.crosshairBloom = Math.max(
-        0,
-        this.crosshairBloom - (dt / PLASMA_CROSSHAIR_BLOOM_RECOVERY)
-      );
-    }
+    return true;
   }
 }

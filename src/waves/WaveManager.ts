@@ -1,4 +1,4 @@
-import { WaveDef, WaveState, WAVE_DEFS, TOTAL_WAVES } from '../utils/Constants';
+import { WaveDef, WaveState, WAVE_DEFS, TOTAL_WAVES, EnemyType } from '../utils/Constants';
 
 export class WaveManager {
   currentWaveIndex = 0; // 0-4
@@ -9,10 +9,15 @@ export class WaveManager {
   timer = 0;
   currentWaveDef: WaveDef = WAVE_DEFS[0];
 
+  // Sprint 4: Portal flag
+  portalActive = false;
+
   // Callbacks set by Game.ts
   onSpawnEnemies: ((count: number, waveDef: WaveDef) => void) | null = null;
   onSpawnHealthPacks: (() => void) | null = null;
   onWaveStateChange: ((state: WaveState, waveNum: number) => void) | null = null;
+  onSpawnAmmoPickup: (() => void) | null = null;  // Sprint 4
+  onPortalActivated: (() => void) | null = null;   // Sprint 4
 
   startGame(): void {
     this.currentWaveIndex = 0;
@@ -20,6 +25,7 @@ export class WaveManager {
     this.enemiesAlive = 0;
     this.enemiesKilled = 0;
     this.timer = 0;
+    this.portalActive = false;
     this.beginSpawning();
   }
 
@@ -27,6 +33,11 @@ export class WaveManager {
     if (this.state !== 'fighting') return;
     this.enemiesAlive = Math.max(0, this.enemiesAlive - 1);
     this.enemiesKilled++;
+
+    // Sprint 4: Ammo pickup every 3 kills
+    if (this.enemiesKilled % 3 === 0) {
+      this.onSpawnAmmoPickup?.();
+    }
 
     if (this.enemiesAlive <= 0) {
       this.beginIntermission();
@@ -66,25 +77,45 @@ export class WaveManager {
     this.totalEnemiesThisWave = 0;
     this.timer = 0;
     this.currentWaveDef = WAVE_DEFS[0];
+    this.portalActive = false;
+  }
+
+  // Sprint 4: Arena transition
+  startNextArenaWaveSet(): void {
+    this.currentWaveIndex = 0;
+    this.portalActive = false;
+    this.beginSpawning();
+  }
+
+  onPortalEntered(): void {
+    this.state = 'transitioning';
+    this.onPortalActivated?.();
   }
 
   private beginSpawning(): void {
     this.currentWaveDef = WAVE_DEFS[this.currentWaveIndex];
     this.enemiesKilled = 0;
 
-    if (this.currentWaveDef.enemyType === 'imp') {
-      this.totalEnemiesThisWave = this.currentWaveDef.enemyCount;
-      this.enemiesAlive = this.currentWaveDef.enemyCount;
+    // Calculate total enemies from wave def's enemy groups
+    let totalEnemies = 0;
+    if (this.currentWaveDef.enemies) {
+      for (const group of this.currentWaveDef.enemies) {
+        totalEnemies += group.count;
+      }
+    } else if (this.currentWaveDef.enemyType === 'imp') {
+      totalEnemies = this.currentWaveDef.enemyCount;
     } else {
-      this.totalEnemiesThisWave = this.currentWaveDef.hasBoss ? 1 : 0;
-      this.enemiesAlive = this.currentWaveDef.hasBoss ? 1 : 0;
+      totalEnemies = this.currentWaveDef.hasBoss ? 1 : 0;
     }
 
-    this.state = 'spawning';
-    this.timer = 2; // "Wave X incoming!" display time
+    // Apply difficulty multiplier
+    this.totalEnemiesThisWave = totalEnemies;
+    this.enemiesAlive = totalEnemies;
 
-    // Notify to spawn enemies
-    this.onSpawnEnemies?.(this.currentWaveDef.enemyCount, this.currentWaveDef);
+    this.state = 'spawning';
+    this.timer = 2;
+
+    this.onSpawnEnemies?.(totalEnemies, this.currentWaveDef);
     this.onWaveStateChange?.('spawning', this.currentWaveIndex + 1);
   }
 
@@ -95,24 +126,23 @@ export class WaveManager {
 
   private beginIntermission(): void {
     if (this.isLastWave() && this.currentWaveDef.hasBoss) {
-      // Boss was on this wave — victory!
+      // Sprint 4: Show portal after boss kill
+      this.portalActive = true;
       this.state = 'victory';
       this.onWaveStateChange?.('victory', this.currentWaveIndex + 1);
       return;
     }
 
     this.state = 'intermission';
-    this.timer = 3; // 3-second intermission
+    this.timer = 3;
 
-    // Spawn health packs for next wave
-    // Actually, health packs should be available now, not at the start of next wave
     this.onSpawnHealthPacks?.();
+    this.onSpawnAmmoPickup?.(); // Sprint 4: Large ammo on intermission
     this.onWaveStateChange?.('intermission', this.currentWaveIndex + 1);
   }
 
   private beginNextWave(): void {
     if (this.currentWaveIndex >= TOTAL_WAVES - 1) {
-      // This shouldn't happen if wave contains boss
       this.state = 'victory';
       this.onWaveStateChange?.('victory', this.currentWaveIndex + 1);
       return;

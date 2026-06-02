@@ -50,10 +50,10 @@ export const BOSS_FIRE_INTERVAL = 2;
 export const BOSS_RADIUS = 1.2;
 export const BOSS_HEIGHT = 3;
 
-// ── Plasma Rifle ──
+// ── Plasma Rifle (Sprint 4: damage changed from 1 to 5) ──
 export const PLASMA_FIRE_INTERVAL = 0.25;
-export const PLASMA_PROJECTILE_SPEED = 100;
-export const PLASMA_PROJECTILE_DAMAGE = 1;
+export const PLASMA_PROJECTILE_SPEED = 60;
+export const PLASMA_PROJECTILE_DAMAGE = 5;
 export const PLASMA_PROJECTILE_LIFETIME = 3;
 export const PLASMA_CROSSHAIR_BLOOM_RECOVERY = 0.2;
 export const PLASMA_PROJECTILE_RADIUS = 0.15;
@@ -135,8 +135,13 @@ export const COLLISION_GROUPS = {
   ARENA: 0x002,
   ENEMIES: 0x004,
   PLAYER_PROJECTILE: 0x008,
+  FLYER: 0x010,
   HEALTH_PACK: 0x020,
   BOSS_PROJECTILE: 0x040,
+  POWER_UP: 0x080,
+  AMMO_PICKUP: 0x100,
+  WEAPON_PICKUP: 0x200,
+  SHELL_CASING: 0x400,
 } as const;
 
 // ── Colors ──
@@ -152,12 +157,149 @@ export const COLORS = {
   VICTORY_PARTICLE: 0xffd700,
 } as const;
 
+// ── Sprint 4: Audio ──
+export const AUDIO_DEFAULTS = {
+  masterVolume: 100,
+  sfxVolume: 80,
+  musicVolume: 50,
+};
+export const AUDIO_STORAGE_KEY = 'doomloop_audio_settings';
+
+// ── Sprint 4: Weapons ──
+export const WEAPON_SWITCH_COOLDOWN = 0.3;     // Seconds
+export const ROCKET_SELF_DAMAGE_RADIUS = 2;
+export const ROCKET_AOE_RADIUS = 3;
+export const ROCKET_SELF_DAMAGE = 10;
+export const SHOTGUN_PELLET_MIN = 5;
+export const SHOTGUN_PELLET_MAX = 8;
+export const AMMO_PICKUP_RESPAWN_KILL_INTERVAL = 3;  // Every N kills
+export const WEAPON_SPAWNER_RESPAWN_TIME = 15;       // Seconds
+
+export const WEAPON_CONFIGS = {
+  plasma: {
+    name: 'Plasma Rifle', damage: 5, fireRate: 0.25,
+    maxAmmo: 40, projectileSpeed: 60, spreadAngle: 0,
+    projectileCount: 1, isAutomatic: false,
+    icon: '⚡', projectileMesh: 'energy_bolt' as const,
+  },
+  shotgun: {
+    name: 'Shotgun', damage: 2, fireRate: 1.2,
+    maxAmmo: 12, projectileSpeed: 40, spreadAngle: 15,
+    projectileCount: 6, isAutomatic: false,
+    icon: '☰', projectileMesh: 'sphere' as const,
+  },
+  smg: {
+    name: 'SMG', damage: 1, fireRate: 0.125,
+    maxAmmo: 60, projectileSpeed: 60, spreadAngle: 2,
+    projectileCount: 1, isAutomatic: true,
+    icon: '≡', projectileMesh: 'sphere' as const,
+  },
+  rocket: {
+    name: 'Rocket Launcher', damage: 20, fireRate: 1.5,
+    maxAmmo: 6, projectileSpeed: 30, spreadAngle: 0,
+    projectileCount: 1, isAutomatic: false,
+    icon: '◎', projectileMesh: 'capsule' as const,
+  },
+} as const;
+
+export const AMMO_PICKUP_SMALL: Record<string, number> = {
+  plasma: 20, shotgun: 5, smg: 15, rocket: 3,
+};
+
+// ── Sprint 4: Gameplay ──
+export const COMBO_WINDOW = 2.0;               // Seconds between kills to maintain combo
+export const MAX_COMBO = 10;
+export const POWER_UP_RESPAWN_TIME = 10;       // Seconds after collection
+export const POWER_UP_SPAWN_CHANCE: Record<string, number> = {
+  speed_boost: 0.30, double_damage: 0.25, shield: 0.25, health_pack: 0.20,
+};
+
+export const POWER_UP_CONFIGS: Record<string, { duration: number; color: number; spawnWeight: number }> = {
+  speed_boost:     { duration: 8,  color: 0x4488FF, spawnWeight: 0.30 },
+  double_damage:   { duration: 8,  color: 0xFF4444, spawnWeight: 0.25 },
+  shield:          { duration: 6,  color: 0xFFFFFF, spawnWeight: 0.25 },
+  health_pack:     { duration: 0,  color: 0x44FF44, spawnWeight: 0.20 },
+};
+
+// ── Sprint 4: Footsteps ──
+export const FOOTSTEP_WALK_INTERVAL = 0.5;     // Seconds (2/sec)
+export const FOOTSTEP_SPRINT_INTERVAL = 0.33;  // Seconds (3/sec)
+export const FOOTSTEP_VOLUME_WALK = 0.3;
+export const FOOTSTEP_VOLUME_SPRINT = 0.6;
+
+// ── Sprint 4: Mini-Map ──
+export const MINI_MAP_SIZE_DESKTOP = 120;
+export const MINI_MAP_SIZE_MOBILE = 80;
+export const MINI_MAP_PADDING = 4;
+export const MINI_MAP_PLAYER_RADIUS = 3;
+export const MINI_MAP_ENEMY_RADIUS = 2;
+
+// ── Sprint 4: Particles ──
+export const PARTICLE_POOL_MUZZLE_FLASH = 100;
+export const PARTICLE_POOL_EXPLOSION = 400;
+export const PARTICLE_POOL_ENEMY = 50;
+export const SHELL_CASING_POOL = 30;
+export const SHELL_CASING_LIFETIME = 5;
+
+// ── Sprint 4: Interactive Elements ──
+export const INTERACT_RADIUS = 2;
+export const SUPPLY_STATION_HEAL = 25;
+export const TRAP_COOLDOWN = 5;
+export const TRAP_SPIKE_DAMAGE = 15;
+export const TRAP_GEYSER_DAMAGE = 15;
+export const TRAP_SLOW_DURATION = 3;
+export const TRAP_SLOW_MULTIPLIER = 0.5;
+
+// ── Sprint 4: Score ──
+export const STORAGE_KEY_HIGH_SCORE = 'doomloop_high_score';
+
+export const POINTS_PER_KILL: Record<string, number> = {
+  imp: 100,
+  shooter_imp: 150,
+  exploder: 200,
+  flyer: 300,
+  boss: 1000,
+};
+
+// ── Sprint 4: Difficulty ──
+export enum Difficulty { easy = 0, normal = 1, hard = 2 }
+
+export interface DifficultyConfig {
+  enemyHealthMultiplier: number;
+  enemyDamageMultiplier: number;
+  waveCountMultiplier: number;
+  powerUpDuration: number;
+  scoreMultiplier: number;
+}
+
+export const DIFFICULTY_CONFIGS: Record<Difficulty, DifficultyConfig> = {
+  [Difficulty.easy]:   { enemyHealthMultiplier: 0.7, enemyDamageMultiplier: 0.5,
+                          waveCountMultiplier: 1.0, powerUpDuration: 10, scoreMultiplier: 0.8 },
+  [Difficulty.normal]: { enemyHealthMultiplier: 1.0, enemyDamageMultiplier: 1.0,
+                          waveCountMultiplier: 1.0, powerUpDuration: 8, scoreMultiplier: 1.0 },
+  [Difficulty.hard]:   { enemyHealthMultiplier: 1.5, enemyDamageMultiplier: 1.5,
+                          waveCountMultiplier: 1.25, powerUpDuration: 5, scoreMultiplier: 1.5 },
+};
+
+export interface WeaponConfig {
+  name: string;
+  damage: number;
+  fireRate: number;
+  maxAmmo: number;
+  projectileSpeed: number;
+  spreadAngle: number;
+  projectileCount: number;
+  isAutomatic: boolean;
+  icon: string;
+  projectileMesh: 'sphere' | 'capsule' | 'energy_bolt';
+}
+
 // ── Types ──
 export type CollisionGroup = keyof typeof COLLISION_GROUPS;
-export type EnemyType = 'imp' | 'boss' | 'none';
+export type EnemyType = 'imp' | 'shooter_imp' | 'exploder' | 'flyer' | 'boss' | 'none';
 export type ProjectileOwner = 'player' | 'boss';
 export type PillarShape = 'box' | 'cylinder';
-export type WaveState = 'idle' | 'spawning' | 'fighting' | 'intermission' | 'victory' | 'gameOver';
+export type WaveState = 'idle' | 'spawning' | 'fighting' | 'intermission' | 'victory' | 'gameOver' | 'transitioning';
 export type Vec3 = [number, number, number];
 
 // ── Arena Layout Types ──
@@ -186,17 +328,23 @@ export interface ArenaLayout {
 }
 
 // ── Wave Types ──
+export interface WaveEnemyGroup {
+  type: EnemyType;
+  count: number;
+}
+
 export interface WaveDef {
   wave: number;
   enemyCount: number;
   enemyType: EnemyType;
   hasBoss: boolean;
+  enemies?: WaveEnemyGroup[];
 }
 
 export const WAVE_DEFS: WaveDef[] = [
-  { wave: 1, enemyCount: 3,  enemyType: 'imp',  hasBoss: false },
-  { wave: 2, enemyCount: 5,  enemyType: 'imp',  hasBoss: false },
-  { wave: 3, enemyCount: 7,  enemyType: 'imp',  hasBoss: false },
-  { wave: 4, enemyCount: 10, enemyType: 'imp',  hasBoss: false },
-  { wave: 5, enemyCount: 0,  enemyType: 'none', hasBoss: true  },
+  { wave: 1, enemyCount: 3,  enemyType: 'imp',  hasBoss: false, enemies: [{ type: 'imp', count: 3 }] },
+  { wave: 2, enemyCount: 5,  enemyType: 'imp',  hasBoss: false, enemies: [{ type: 'imp', count: 3 }, { type: 'shooter_imp', count: 2 }] },
+  { wave: 3, enemyCount: 7,  enemyType: 'imp',  hasBoss: false, enemies: [{ type: 'imp', count: 4 }, { type: 'shooter_imp', count: 2 }, { type: 'exploder', count: 1 }] },
+  { wave: 4, enemyCount: 10, enemyType: 'imp',  hasBoss: false, enemies: [{ type: 'imp', count: 4 }, { type: 'shooter_imp', count: 3 }, { type: 'exploder', count: 2 }, { type: 'flyer', count: 1 }] },
+  { wave: 5, enemyCount: 0,  enemyType: 'none', hasBoss: true,  enemies: [] },
 ];

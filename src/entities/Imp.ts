@@ -111,8 +111,12 @@ export class Imp extends Entity {
     (this.mesh.material as THREE.MeshStandardMaterial).color.setHex(0xffffff);
 
     if (this.health <= 0) {
-      this.isAlive = false;
+      this.die();
     }
+  }
+
+  die(): void {
+    this.isAlive = false;
   }
 
   applyKnockback(from: THREE.Vector3): void {

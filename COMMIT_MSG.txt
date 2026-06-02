@@ -1,0 +1,8 @@
+Sprint 4: Audio, Weapons, Gameplay Depth, Scene and Visual
+
+4 pillars delivered:
+- Audio and Atmosphere (SFX, music, dynamic mood)
+- Weapon System (SMG, Shotgun, Rocket Launcher, Plasma Rifle)
+- Gameplay Depth (combo system, mini-map, weapon pickups)
+- Scene and Visual (arena themes, supply stations, trap zones)
+- Bug fixes: projectile tracking, Exploder trigger distance

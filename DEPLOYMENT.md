@@ -1,29 +1,47 @@
 # Doomloop Deployment Guide
 
-## Project Overview
-Doomloop is a first-person shooter game built with Three.js + Cannon-es + Vite 5 + TypeScript.
-
 ## Build
-```
+```bash
 cd /opt/data/workspace/projects/doomloop
+npm install
 npm run build
 ```
-Output goes to `dist/`.
 
-## Deployment
-The build output is a static site (`dist/`). Serve with any static file server:
-- Vite dev server: `npm run dev`
-- Production: serve `dist/` via nginx, Netlify, Vercel, Cloudflare Pages, etc.
+Output goes to `dist/`:
+- `dist/index.html` — Entry point
+- `dist/assets/` — JS bundles (cannon-es, Three.js, game code)
+- `dist/doomloop-screens/` — Screenshots
 
-## Environment
-- No server-side runtime required
-- All browser-native APIs (no npm deps beyond Three.js, Cannon-es, Vite)
-- Works on modern browsers (Chrome, Firefox, Safari, Edge)
-- iPhone Safari specifically optimized (Sprint 3)
+## Bundle Size (Sprint 4)
+- `index.js`: 151.62 KB raw, ~35.88 KB gzipped (under 50 KB NFR)
+- `cannon-es`: 84.08 KB raw, ~24.39 KB gzipped
+- `three.js`: 467.34 KB raw, ~117.59 KB gzipped
 
-## Files Modified (Sprint 3)
-- `src/input/touch-controls.css` — safe area, animations, panel/overlay styles (±200 lines)
-- `src/input/TouchInputAdapter.ts` — settings, haptics, viewport, help overlay, visual feedback (+~150 lines)
-- `src/input/TouchTypes.ts` — hapticFeedback field, 3 new DOM refs (+4 lines)
-- `src/utils/Constants.ts` — 20 new constants (+20 lines)
-- `src/Game.ts` — visualViewport handler, settings load, haptic calls (+~25 lines)
+## Deployment Options
+
+### Option 1: Static Site (Dokploy)
+- App type: `static`
+- Build output: `dist/`
+- No server-side runtime needed
+- Push dist/ or use Docker
+
+### Option 2: Local Dev Server + Tunnel
+```bash
+cd dist && npx serve . -p 8080
+# Then tunnel externally
+```
+
+### Option 3: Dokploy Docker Deploy
+See `deploy-config.yaml` for Dokploy settings.
+
+## Verification Checklist
+1. ✅ `npm run build` succeeds
+2. ✅ `tsc --noEmit` — zero errors
+3. ✅ Game loads in browser (check console for errors)
+4. ✅ All 4 weapon types fire (1-4 keys)
+5. ✅ Audio plays (click first to resume AudioContext)
+6. ✅ Power-ups spawn and are collectible
+7. ✅ Score and combo display updates on kills
+8. ✅ Mini-map shows at top-right
+9. ✅ Arena transitions via portal after wave 5
+10. ✅ Mobile: touch controls, weapon bar, mini-map sized correctly
