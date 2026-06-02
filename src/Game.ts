@@ -101,17 +101,17 @@ export class Game {
     // Scene
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x111122); // Dark blue-black sky
-    this.scene.fog = new THREE.Fog(0x111122, 30, 60); // Distance fog
+    this.scene.fog = new THREE.Fog(0x111122, 40, 80); // Distance fog (lighter)
 
     // Lighting
-    const ambientLight = new THREE.AmbientLight(0x444466, 0.6);
+    const ambientLight = new THREE.AmbientLight(0x667799, 1.2);
     this.scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 2.0);
     dirLight.position.set(10, 20, 10);
     this.scene.add(dirLight);
 
-    const hemiLight = new THREE.HemisphereLight(0x4466aa, 0x222244, 0.5);
+    const hemiLight = new THREE.HemisphereLight(0x6688bb, 0x333355, 0.8);
     this.scene.add(hemiLight);
 
     // Engine — Create InputManager as default
@@ -234,6 +234,9 @@ export class Game {
       return;
     }
 
+    // During death animation, skip gameplay input
+    if (this.isDying) return;
+
     if (this.gamePhase !== 'playing') return;
 
     // Handle restart during gameplay
@@ -307,6 +310,9 @@ export class Game {
 
     // Update camera (FOV, bob)
     this.camera.update(1 / 60);
+
+    // Update death animation (camera tilt to sky)
+    this.updateDeathAnimation(1 / 60);
 
     // Update effects
     this.damageFlash.update(1 / 60);
@@ -421,6 +427,11 @@ export class Game {
           player.body.position.z
         );
         imp.applyKnockback(knockbackFrom);
+
+        // Check if player died from Imp contact
+        if (!player.isAlive) {
+          this.triggerPlayerDeath();
+        }
         return;
       }
 
@@ -465,7 +476,7 @@ export class Game {
         this.markForRemoval(proj);
 
         if (!player.isAlive) {
-          this.waveManager.onPlayerDeath();
+          this.triggerPlayerDeath();
         }
         return;
       }
@@ -539,15 +550,8 @@ export class Game {
         this.hud.hide();
         this.crosshair.hide();
       } else if (state === 'gameOver') {
-        this.gamePhase = 'dead';
-        if (this.isTouchDevice) {
-          this.overlay.showMobileDeath(waveNum);
-        } else {
-          this.overlay.showDeath(waveNum);
-          this.inputManager.exitPointerLock();
-        }
-        this.hud.hide();
-        this.crosshair.hide();
+        // Death is now handled by triggerPlayerDeath() + death animation
+        // This state is set after the animation completes
       }
     };
   }
@@ -567,6 +571,54 @@ export class Game {
     });
   }
 
+  // ── Player Death ──
+
+  private isDying = false;
+  private deathAnimTimer = 0;
+  private readonly DEATH_ANIM_DURATION = 1.2; // seconds
+
+  private triggerPlayerDeath(): void {
+    if (this.isDying) return;
+    this.isDying = true;
+    this.deathAnimTimer = 0;
+
+    // Exit pointer lock on desktop
+    if (!this.isTouchDevice) {
+      this.inputManager.exitPointerLock();
+    }
+  }
+
+  private updateDeathAnimation(dt: number): void {
+    if (!this.isDying) return;
+
+    this.deathAnimTimer += dt;
+    const t = Math.min(this.deathAnimTimer / this.DEATH_ANIM_DURATION, 1);
+
+    // Smoothly tilt camera upward (pitch toward sky)
+    // Ease-out curve for dramatic effect
+    const easeT = 1 - Math.pow(1 - t, 3);
+    const deathPitch = easeT * (Math.PI / 3); // 60 degrees up = looking at sky
+    this.camera.setDeathPitch(deathPitch);
+
+    // Slight roll for disorientation
+    const deathRoll = easeT * 0.15;
+    this.camera.setDeathRoll(deathRoll);
+
+    // When animation complete, show death screen
+    if (t >= 1) {
+      this.isDying = false;
+      this.gamePhase = 'dead';
+      if (this.isTouchDevice) {
+        this.overlay.showMobileDeath(this.waveManager.currentWaveIndex + 1);
+      } else {
+        this.overlay.showDeath(this.waveManager.currentWaveIndex + 1);
+      }
+      this.hud.hide();
+      this.crosshair.hide();
+      this.waveManager.onPlayerDeath();
+    }
+  }
+
   // ── Game State ──
 
   private startPlaying(): void {
@@ -582,6 +634,12 @@ export class Game {
   restart(): void {
     // Clear all entities
     this.clearEntities();
+
+    // Reset death animation
+    this.isDying = false;
+    this.deathAnimTimer = 0;
+    this.camera.setDeathPitch(0);
+    this.camera.setDeathRoll(0);
 
     // Clear effects
     this.deathEffect.clear();

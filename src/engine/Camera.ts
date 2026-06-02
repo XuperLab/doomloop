@@ -16,6 +16,8 @@ export class Camera {
   private bobPhase = 0;
   private isMoving = false;
   private walking = false;
+  private deathPitchOffset = 0;
+  private deathRollOffset = 0;
 
   constructor(aspect: number) {
     this.camera = new THREE.PerspectiveCamera(PLAYER_DEFAULT_FOV, aspect, 0.1, 200);
@@ -49,6 +51,16 @@ export class Camera {
   setMoving(moving: boolean): void {
     this.isMoving = moving;
     this.walking = moving;
+  }
+
+  /** Set death animation pitch offset (looking up at sky) */
+  setDeathPitch(pitch: number): void {
+    this.deathPitchOffset = pitch;
+  }
+
+  /** Set death animation roll offset (slight tilt) */
+  setDeathRoll(roll: number): void {
+    this.deathRollOffset = roll;
   }
 
   /** Get forward direction in XZ plane */
@@ -96,9 +108,10 @@ export class Camera {
       this.bobPhase = 0;
     }
 
-    // Apply rotation
+    // Apply rotation (with death animation offsets)
+    const effectivePitch = this.pitch + this.deathPitchOffset;
     const q = new THREE.Quaternion();
-    q.setFromEuler(new THREE.Euler(this.pitch, this.yaw, 0, 'YXZ'));
+    q.setFromEuler(new THREE.Euler(effectivePitch, this.yaw, this.deathRollOffset, 'YXZ'));
     this.camera.quaternion.copy(q);
 
     // Bob offset is applied to position externally (camera position is driven by Player)
@@ -112,6 +125,8 @@ export class Camera {
     this.targetFov = PLAYER_DEFAULT_FOV;
     this.bobPhase = 0;
     this.isMoving = false;
+    this.deathPitchOffset = 0;
+    this.deathRollOffset = 0;
   }
 
   getYaw(): number {

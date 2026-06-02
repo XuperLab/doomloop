@@ -87,7 +87,7 @@ export class Boss extends Entity {
       200,
       [position.x, position.y + BOSS_HEIGHT / 2, position.z],
       COLLISION_GROUPS.ENEMIES,
-      COLLISION_GROUPS.PLAYER | COLLISION_GROUPS.ARENA | COLLISION_GROUPS.PLAYER_PROJECTILE
+      COLLISION_GROUPS.PLAYER | COLLISION_GROUPS.ARENA | COLLISION_GROUPS.PLAYER_PROJECTILE | COLLISION_GROUPS.ENEMIES
     );
     this.body.fixedRotation = true;
     this.body.linearDamping = 0.8;

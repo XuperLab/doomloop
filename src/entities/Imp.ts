@@ -46,7 +46,7 @@ export class Imp extends Entity {
       30,
       [position.x, position.y + 0.6, position.z],
       COLLISION_GROUPS.ENEMIES,
-      COLLISION_GROUPS.PLAYER | COLLISION_GROUPS.ARENA | COLLISION_GROUPS.PLAYER_PROJECTILE
+      COLLISION_GROUPS.PLAYER | COLLISION_GROUPS.ARENA | COLLISION_GROUPS.PLAYER_PROJECTILE | COLLISION_GROUPS.ENEMIES
     );
     this.body.fixedRotation = true;
     this.body.linearDamping = 0.9; // High damping so it stops quickly
