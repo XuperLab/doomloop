@@ -1,34 +1,29 @@
-# Doomloop — Sprint 2: Mobile Touch Controls
+# Doomloop Deployment Guide
 
-## Deployment Instructions
+## Project Overview
+Doomloop is a first-person shooter game built with Three.js + Cannon-es + Vite 5 + TypeScript.
 
-### Build
-```bash
+## Build
+```
 cd /opt/data/workspace/projects/doomloop
 npm run build
 ```
+Output goes to `dist/`.
 
-This produces:
-- `dist/index.html` (11.76 KB)
-- `dist/assets/index-DB7Z52AE.js` (55.21 KB)
-- `dist/assets/cannon-CbR5xzcU.js` (84.08 KB)
-- `dist/assets/three-B4v6BLg2.js` (459.39 KB)
+## Deployment
+The build output is a static site (`dist/`). Serve with any static file server:
+- Vite dev server: `npm run dev`
+- Production: serve `dist/` via nginx, Netlify, Vercel, Cloudflare Pages, etc.
 
-### Deploy
-The build output is a static site. Serve the `dist/` directory with any static file server (nginx, Caddy, Vercel, Netlify, etc.).
+## Environment
+- No server-side runtime required
+- All browser-native APIs (no npm deps beyond Three.js, Cannon-es, Vite)
+- Works on modern browsers (Chrome, Firefox, Safari, Edge)
+- iPhone Safari specifically optimized (Sprint 3)
 
-### Key Changes (Sprint 2)
-- **5 new files** in `src/input/`: `InputAdapter.ts`, `MobileDetector.ts`, `TouchInputAdapter.ts`, `TouchTypes.ts`, `touch-controls.css`
-- **6 modified files**: `Game.ts`, `InputManager.ts`, `Player.ts`, `OverlayScreen.ts`, `Constants.ts`, `index.html`
-- **Zero new npm dependencies** — all touch handling uses vanilla JS DOM touch events
-
-### Architecture
-- Adapter pattern: `InputAdapter` interface implemented by both `InputManager` (desktop) and `TouchInputAdapter` (mobile)
-- Mobile detection: `'ontouchstart' in window` or `navigator.maxTouchPoints > 0`
-- On mobile: TouchInputAdapter creates DOM overlay with virtual joystick (left half), camera touch-drag (right half), fire button (lower-right), jump button (lower-left)
-- Desktop: completely unchanged — no touch elements in DOM, Pointer Lock still works
-- iOS Safari prevention: viewport meta with `user-scalable=no`, CSS `overscroll-behavior: none`, non-passive `touchmove`
-
-### Verification
-- Desktop: `npm run dev`, confirm WASD + mouse look + Shift sprint + Space jump all work
-- Mobile: Open on iPhone/Android, confirm touch controls appear and game is playable
+## Files Modified (Sprint 3)
+- `src/input/touch-controls.css` — safe area, animations, panel/overlay styles (±200 lines)
+- `src/input/TouchInputAdapter.ts` — settings, haptics, viewport, help overlay, visual feedback (+~150 lines)
+- `src/input/TouchTypes.ts` — hapticFeedback field, 3 new DOM refs (+4 lines)
+- `src/utils/Constants.ts` — 20 new constants (+20 lines)
+- `src/Game.ts` — visualViewport handler, settings load, haptic calls (+~25 lines)

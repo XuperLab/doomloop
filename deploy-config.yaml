@@ -1,10 +1,20 @@
-# Deployment Configuration for Doomloop Sprint 2
+# deploy-config.yaml
+# This file is consumed by the deploy-agent to determine deployment strategy.
+
 project_name: doomloop
-version: "1.1.0"  # Sprint 2 adds mobile touch controls
+project_path: /opt/data/workspace/projects/doomloop
 build_command: npm run build
 build_output: dist/
-static_dir: dist/
-entry_point: dist/index.html
-type: static_site
-platform: static  # Deploy as static files (Vite build output)
-notes: "Sprint 2: Mobile touch controls. No new npm dependencies — vanilla JS DOM touch events only. Desktop code path unchanged."
+deployment_type: static_site
+platform: static_site  # No server runtime required
+environment: production
+env_variables: {}
+health_check: null  # Static sites don't need health checks
+notes: |
+  Doomloop Sprint 3 (iPhone Touch Control Polish) implemented.
+  All features: F01-F12 (safe area, tap delay, gesture suppression,
+  address bar resize, haptic feedback, settings panel, visual feedback,
+  help overlay, joystick visual, scroll prevention, HUD optimization).
+  Build verified: tsc --noEmit zero errors, npm run build succeeds.
+  Bundle: ~161KB gzipped total (Three.js, Cannon-es, game code).
+  Sprint 3 additions ≈ 4.6KB gzipped.

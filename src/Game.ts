@@ -31,6 +31,14 @@ import {
   PLAYER_SPAWN,
   BOSS_SPAWN,
   COLLISION_GROUPS,
+  // Sprint 3: Settings
+  LOCALSTORAGE_SETTINGS_KEY,
+  LOCALSTORAGE_HELP_KEY,
+  SETTINGS_SENSITIVITY_DEFAULT,
+  SETTINGS_DEAD_ZONE_DEFAULT,
+  SETTINGS_HAPTIC_DEFAULT,
+  // Sprint 3: Viewport
+  VISUAL_VIEWPORT_DEBOUNCE_MS,
 } from './utils/Constants';
 import { RNG } from './utils/RNG';
 
@@ -79,6 +87,12 @@ export class Game {
     fire: false, jumpPressed: false, sprint: false,
     mouseDeltaX: 0, mouseDeltaY: 0, restart: false,
   };
+
+  // Sprint 3: Touch adapter reference for haptic + viewport calls
+  private touchAdapter: TouchInputAdapter | null = null;
+
+  // Sprint 3: VisualViewport resize handler
+  private boundViewportResize: (() => void) | null = null;
 
   // Container
   private container: HTMLElement;
@@ -161,7 +175,19 @@ export class Game {
       // Touch device: use TouchInputAdapter, skip pointer lock
       const touchAdapter = new TouchInputAdapter();
       this.inputAdapter = touchAdapter;
+      this.touchAdapter = touchAdapter; // Sprint 3: Store reference for haptics + viewport
       this.inputAdapter.init(this.renderer.domElement);
+
+      // Sprint 3 (F04): Register visualViewport resize handler
+      this.setupVisualViewport();
+
+      // Sprint 3 (F07): Load settings from localStorage (already loaded inside TouchInputAdapter.init via loadSettings)
+
+      // Sprint 3 (F09): Show help overlay on first-time mobile start
+      const helpShown = localStorage.getItem(LOCALSTORAGE_HELP_KEY);
+      if (!helpShown) {
+        touchAdapter.showHelpOverlay();
+      }
 
       // Mobile overlay callback — tap to start (no pointer lock needed)
       this.overlay.onStartClick = () => {
@@ -421,6 +447,8 @@ export class Game {
       if (player && imp && imp.isAlive && player.isAlive) {
         player.takeDamage(imp.contactDamage);
         this.damageFlash.show();
+        // Sprint 3 (F06): Haptic feedback on damage
+        if (this.touchAdapter) this.touchAdapter.damageHaptic();
         const knockbackFrom = new THREE.Vector3(
           player.body.position.x,
           player.body.position.y,
@@ -451,6 +479,8 @@ export class Game {
           target.takeDamage(proj.damage);
           proj.onHit();
           this.hitMarker.show();
+          // Sprint 3 (F06): Haptic on hit
+          if (this.touchAdapter) this.touchAdapter.hitHaptic();
 
           if (!target.isAlive) {
             // Enemy died
@@ -472,6 +502,8 @@ export class Game {
       if (proj && proj.owner === 'boss' && player && player.isAlive) {
         player.takeDamage(proj.damage);
         this.damageFlash.show();
+        // Sprint 3 (F06): Haptic feedback on damage
+        if (this.touchAdapter) this.touchAdapter.damageHaptic();
         proj.onHit();
         this.markForRemoval(proj);
 
@@ -749,6 +781,27 @@ export class Game {
       }
     }
     this.pendingRemovals.length = 0;
+  }
+
+  // ── Sprint 3: VisualViewport Handler (F04) ──
+
+  private setupVisualViewport(): void {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    this.boundViewportResize = () => {
+      if (!this.touchAdapter) return;
+      const vvInner = window.visualViewport;
+      if (!vvInner) return;
+
+      // Reposition controls + resize canvas for address bar
+      if (this.renderer) {
+        this.renderer.setSize(vvInner.width, vvInner.height);
+      }
+      this.camera.setAspect(vvInner.width / vvInner.height);
+    };
+
+    vv.addEventListener('resize', this.boundViewportResize);
   }
 
   // ── Resize ──

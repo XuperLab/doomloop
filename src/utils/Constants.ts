@@ -98,6 +98,33 @@ export const FADE_OPACITY = 0.3;                 // faded opacity (P2)
 export const DEFAULT_OPACITY = 0.4;              // normal opacity
 export const ACTIVE_OPACITY = 0.8;               // pressed opacity
 
+// ── Sprint 3: Haptic Feedback (F06) ──
+export const HAPTIC_FIRE_MS = 20;               // ms — fire button vibration
+export const HAPTIC_HIT_MS = 50;                // ms — enemy hit vibration
+export const HAPTIC_DAMAGE_MS = 100;            // ms — player damage vibration
+export const HAPTIC_DAMAGE_DEBOUNCE_MS = 200;   // ms — cooldown between damage haptics
+
+// ── Sprint 3: Touch Settings (F07) ──
+export const SETTINGS_DEAD_ZONE_MIN = 4;         // px — minimum dead zone slider value
+export const SETTINGS_DEAD_ZONE_MAX = 20;        // px — maximum dead zone slider value
+export const SETTINGS_DEAD_ZONE_DEFAULT = 8;     // px — default dead zone
+export const SETTINGS_DEAD_ZONE_STEP = 1;        // px — slider step
+export const SETTINGS_SENSITIVITY_MIN = 0.004;   // rad/px — minimum sensitivity
+export const SETTINGS_SENSITIVITY_MAX = 0.016;   // rad/px — maximum sensitivity
+export const SETTINGS_SENSITIVITY_DEFAULT = 0.008; // rad/px — default sensitivity
+export const SETTINGS_SENSITIVITY_STEP = 0.001;  // rad/px — slider step
+export const SETTINGS_HAPTIC_DEFAULT = true;     // haptic feedback default
+export const LOCALSTORAGE_SETTINGS_KEY = 'doomloop_touch_settings';  // localStorage key
+export const LOCALSTORAGE_HELP_KEY = 'doomloop_help_shown';          // help overlay flag key
+
+// ── Sprint 3: Visual Feedback (F08) ──
+export const FIRE_HOLD_ACTIVE_MS = 300;         // ms — hold duration before "active-hold" state
+export const HINT_LABEL_DURATION_MS = 2000;      // ms — hint labels visible on first touch
+export const HINT_LABEL_FADE_MS = 1000;           // ms — hint label fade-out transition
+
+// ── Sprint 3: Address Bar Resize (F04) ──
+export const VISUAL_VIEWPORT_DEBOUNCE_MS = 50;   // ms — debounce for visualViewport resize
+
 // ── Button Dimensions ──
 export const FIRE_BUTTON_SIZE = 60;              // px minimum
 export const JUMP_BUTTON_SIZE = 50;              // px minimum
