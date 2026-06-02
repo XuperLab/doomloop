@@ -162,6 +162,14 @@ export class Game {
       const touchAdapter = new TouchInputAdapter();
       this.inputAdapter = touchAdapter;
       this.inputAdapter.init(this.renderer.domElement);
+
+      // Mobile overlay callback — tap to start (no pointer lock needed)
+      this.overlay.onStartClick = () => {
+        this.overlay.hideStart();
+        if (this.gamePhase === 'menu') {
+          this.startPlaying();
+        }
+      };
     } else {
       // Desktop: use InputManager with pointer lock
       this.inputManager.init(this.renderer.domElement);

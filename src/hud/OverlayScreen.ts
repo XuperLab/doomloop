@@ -36,9 +36,16 @@ export class OverlayScreen {
   }
 
   private bindEvents(): void {
-    this.startOverlay.addEventListener('click', () => {
+    // Use both click and touchstart for the start overlay
+    // touchstart fires immediately on mobile (no 300ms delay)
+    const startHandler = () => {
       this.onStartClick?.();
-    });
+    };
+    this.startOverlay.addEventListener('click', startHandler);
+    this.startOverlay.addEventListener('touchstart', (e) => {
+      e.preventDefault(); // Prevent duplicate click + ghost click
+      startHandler();
+    }, { passive: false });
 
     document.getElementById('restart-from-death')?.addEventListener('click', () => {
       this.onRestartFromDeath?.();
