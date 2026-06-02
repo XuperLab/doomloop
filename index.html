@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Doomloop</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    #app { width: 100%; height: 100%; position: relative; }
+    canvas { display: block; }
+
+    /* Loading Screen */
+    #loading-screen {
+      position: fixed; inset: 0; z-index: 1000;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: #0a0a0a; color: #fff;
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      transition: opacity 0.5s ease;
+    }
+    #loading-screen.hidden { opacity: 0; pointer-events: none; }
+    #loading-screen h1 {
+      font-size: 3rem; letter-spacing: 0.3em;
+      text-transform: uppercase; margin-bottom: 1.5rem;
+      color: #ff4444; text-shadow: 0 0 20px rgba(255,68,68,0.5);
+    }
+    #loading-screen .spinner {
+      width: 40px; height: 40px; border: 3px solid #333;
+      border-top-color: #ff4444; border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading-screen .progress-text {
+      margin-top: 1rem; color: #888; font-size: 0.9rem;
+    }
+
+    /* Start Overlay */
+    #start-overlay {
+      position: fixed; inset: 0; z-index: 500;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.7); color: #fff;
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      cursor: pointer; user-select: none;
+    }
+    #start-overlay.hidden { display: none; }
+    #start-overlay h1 {
+      font-size: 4rem; letter-spacing: 0.2em;
+      text-transform: uppercase; color: #ff4444;
+      text-shadow: 0 0 30px rgba(255,68,68,0.5);
+      margin-bottom: 1rem;
+    }
+    #start-overlay p {
+      font-size: 1.2rem; color: #ccc; margin-bottom: 2rem;
+    }
+    #start-overlay .controls-hint {
+      font-size: 0.85rem; color: #666; text-align: center;
+      line-height: 1.8;
+    }
+    #start-overlay .controls-hint kbd {
+      background: #222; padding: 2px 8px; border-radius: 3px;
+      border: 1px solid #444; font-size: 0.8rem; color: #ddd;
+    }
+
+    /* HUD */
+    #hud {
+      position: fixed; inset: 0; z-index: 100;
+      pointer-events: none; display: none;
+    }
+    #hud.visible { display: block; }
+
+    #hp-bar-container {
+      position: absolute; top: 20px; left: 20px;
+      width: 250px;
+    }
+    #hp-label {
+      color: #fff; font-family: monospace; font-size: 0.9rem;
+      margin-bottom: 4px; text-shadow: 0 0 4px rgba(0,0,0,0.8);
+    }
+    #hp-bar-bg {
+      width: 100%; height: 20px; background: #333;
+      border: 2px solid #555; position: relative; overflow: hidden;
+    }
+    #hp-bar-fill {
+      height: 100%; width: 100%; background: #e03030;
+      transition: width 0.15s ease;
+    }
+    #hp-bar-fill.low { background: #e03030; }
+    #hp-bar-fill.medium { background: #e08030; }
+    #hp-bar-fill.high { background: #30b030; }
+
+    #wave-display {
+      position: absolute; top: 20px; left: 50%;
+      transform: translateX(-50%);
+      color: #fff; font-family: monospace; font-size: 1.2rem;
+      text-shadow: 0 0 6px rgba(0,0,0,0.8);
+    }
+    #kill-count {
+      position: absolute; top: 20px; right: 20px;
+      color: #fff; font-family: monospace; font-size: 1rem;
+      text-shadow: 0 0 6px rgba(0,0,0,0.8);
+    }
+
+    /* Crosshair */
+    #crosshair {
+      position: fixed; top: 50%; left: 50%; z-index: 150;
+      transform: translate(-50%, -50%);
+      pointer-events: none; display: none;
+    }
+    #crosshair.visible { display: block; }
+    #crosshair svg {
+      transition: r 0.15s ease;
+    }
+
+    /* Hit Marker */
+    #hit-marker {
+      position: fixed; top: 50%; left: 50%; z-index: 160;
+      transform: translate(-50%, -50%);
+      pointer-events: none; opacity: 0; transition: opacity 0.1s;
+    }
+    #hit-marker.show { opacity: 1; }
+
+    /* Damage Flash */
+    #damage-flash {
+      position: fixed; inset: 0; z-index: 200;
+      background: radial-gradient(ellipse at center, transparent 60%, rgba(255,0,0,0.5) 100%);
+      pointer-events: none; opacity: 0; transition: opacity 0.1s;
+    }
+
+    /* Overlay Screens (death, victory, notifications) */
+    .overlay-screen {
+      position: fixed; inset: 0; z-index: 400;
+      display: none; flex-direction: column;
+      align-items: center; justify-content: center;
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+    }
+    .overlay-screen.visible { display: flex; }
+    .overlay-screen h1 {
+      font-size: 4rem; letter-spacing: 0.1em;
+      text-transform: uppercase; margin-bottom: 1rem;
+    }
+    .overlay-screen p {
+      font-size: 1.3rem; margin-bottom: 0.5rem;
+    }
+    .overlay-screen .restart-hint {
+      font-size: 0.9rem; color: #888; margin-top: 1.5rem;
+    }
+    .overlay-screen button {
+      margin-top: 1rem; padding: 12px 40px;
+      font-size: 1.2rem; background: #ff4444;
+      color: #fff; border: none; border-radius: 4px;
+      cursor: pointer; pointer-events: all;
+    }
+    .overlay-screen button:hover { background: #ff6666; }
+
+    #death-screen { background: rgba(80,0,0,0.85); }
+    #death-screen h1 { color: #ff2222; text-shadow: 0 0 40px rgba(255,0,0,0.6); }
+
+    #victory-screen { background: rgba(0,0,0,0.8); }
+    #victory-screen h1 { color: #ffd700; text-shadow: 0 0 40px rgba(255,215,0,0.5); }
+
+    #notification {
+      position: fixed; top: 40%; left: 50%; z-index: 300;
+      transform: translate(-50%, -50%);
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      color: #fff; font-size: 2rem; text-align: center;
+      text-shadow: 0 0 20px rgba(0,0,0,0.9);
+      pointer-events: none; opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    #notification.show { opacity: 1; }
+    #notification .subtext {
+      font-size: 1rem; color: #aaa; margin-top: 0.5rem;
+    }
+
+    /* Pointer Lock fallback */
+    #pointer-lock-required {
+      position: fixed; inset: 0; z-index: 900;
+      display: none; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.9); color: #fff;
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+    }
+    #pointer-lock-required.visible { display: flex; }
+    #pointer-lock-required p { font-size: 1.2rem; margin-bottom: 1rem; }
+    #pointer-lock-required button {
+      padding: 10px 30px; font-size: 1rem;
+      background: #ff4444; color: #fff; border: none;
+      border-radius: 4px; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+      <h1>Doomloop</h1>
+      <div class="spinner"></div>
+      <div class="progress-text">Loading...</div>
+    </div>
+
+    <!-- Start Overlay -->
+    <div id="start-overlay" class="hidden">
+      <h1>Doomloop</h1>
+      <p>Click to start</p>
+      <div class="controls-hint">
+        <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move &nbsp;|&nbsp; <kbd>Shift</kbd> Sprint &nbsp;|&nbsp; <kbd>Space</kbd> Jump<br/>
+        Mouse look &nbsp;|&nbsp; Left Click Fire &nbsp;|&nbsp; <kbd>R</kbd> Restart
+      </div>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud">
+      <div id="hp-bar-container">
+        <div id="hp-label">HP: 100/100</div>
+        <div id="hp-bar-bg">
+          <div id="hp-bar-fill" class="high"></div>
+        </div>
+      </div>
+      <div id="wave-display">Wave 1/5</div>
+      <div id="kill-count">0/0 Killed</div>
+    </div>
+
+    <!-- Crosshair -->
+    <div id="crosshair">
+      <svg width="24" height="24" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="2" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="1"/>
+        <line x1="12" y1="4" x2="12" y2="8" stroke="rgba(255,255,255,0.8)" stroke-width="1"/>
+        <line x1="12" y1="16" x2="12" y2="20" stroke="rgba(255,255,255,0.8)" stroke-width="1"/>
+        <line x1="4" y1="12" x2="8" y2="12" stroke="rgba(255,255,255,0.8)" stroke-width="1"/>
+        <line x1="16" y1="12" x2="20" y2="12" stroke="rgba(255,255,255,0.8)" stroke-width="1"/>
+      </svg>
+    </div>
+
+    <!-- Hit Marker -->
+    <div id="hit-marker">
+      <svg width="16" height="16" viewBox="0 0 16 16">
+        <line x1="3" y1="3" x2="13" y2="13" stroke="#fff" stroke-width="2" opacity="0.9"/>
+        <line x1="13" y1="3" x2="3" y2="13" stroke="#fff" stroke-width="2" opacity="0.9"/>
+      </svg>
+    </div>
+
+    <!-- Damage Flash -->
+    <div id="damage-flash"></div>
+
+    <!-- Notification -->
+    <div id="notification">
+      <div class="main-text"></div>
+      <div class="subtext"></div>
+    </div>
+
+    <!-- Death Screen -->
+    <div id="death-screen" class="overlay-screen">
+      <h1>YOU DIED</h1>
+      <p id="death-wave-text">Wave 0/5</p>
+      <button id="restart-from-death">Play Again</button>
+      <div class="restart-hint">or press <kbd>R</kbd> to restart</div>
+    </div>
+
+    <!-- Victory Screen -->
+    <div id="victory-screen" class="overlay-screen">
+      <h1>VICTORY</h1>
+      <p>You conquered the Doomloop!</p>
+      <button id="restart-from-victory">Play Again</button>
+      <div class="restart-hint">or press <kbd>R</kbd> to restart</div>
+    </div>
+
+    <!-- Pointer Lock Fallback -->
+    <div id="pointer-lock-required">
+      <p>Please allow mouse lock to play</p>
+      <button id="pointer-lock-retry">Try Again</button>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

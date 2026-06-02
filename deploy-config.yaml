@@ -1,0 +1,11 @@
+# Doomloop deploy-config
+# Deploy to any static host (Vercel / Netlify / GitHub Pages)
+
+project_name: doomloop
+directory: /opt/data/workspace/projects/doomloop
+build_command: npm run build
+output_dir: dist
+framework: vite
+type: static
+env:
+  NODE_VERSION: "18"
