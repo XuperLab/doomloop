@@ -276,6 +276,12 @@ export class Game {
     }
     this.hud.hide();
     this.crosshair.hide();
+
+    // Hide arena objects during menu to avoid cluttered start screen
+    for (const trap of this.trapZones) trap.mesh.visible = false;
+    for (const ss of this.supplyStations) ss.mesh.visible = false;
+    for (const wp of this.weaponPickups) wp.mesh.visible = false;
+
     this.gameLoop.start();
   }
 
@@ -925,10 +931,10 @@ export class Game {
 
     this.waveManager.onWaveStateChange = (state: string, waveNum: number) => {
       if (state === 'spawning') {
-        this.overlay.showNotification(`Wave ${waveNum}/5 incoming!`, '', 2);
+        this.overlay.showNotification(`⚔️ Wave ${waveNum}/5`, 'Enemies incoming!', 3);
         this.audioManager.setWave(waveNum - 1);
       } else if (state === 'intermission') {
-        this.overlay.showNotification(`Wave ${waveNum - 1} complete!`, 'Get ready...', 3);
+        this.overlay.showNotification(`✅ Wave ${waveNum - 1} complete!`, `Wave ${waveNum} starting soon...`, 4);
         // Reset supply stations
         for (const ss of this.supplyStations) ss.resetForWave();
       } else if (state === 'victory') {
@@ -1209,6 +1215,11 @@ export class Game {
     if (!this.player) {
       this.spawnPlayer();
     }
+
+    // Show arena objects (hidden during menu)
+    for (const trap of this.trapZones) trap.mesh.visible = true;
+    for (const ss of this.supplyStations) ss.mesh.visible = true;
+    for (const wp of this.weaponPickups) wp.mesh.visible = true;
 
     // Sprint 4: Init subsystems
     this.powerUpManager = new PowerUpManager(this.scene);

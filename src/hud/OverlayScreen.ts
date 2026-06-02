@@ -50,10 +50,18 @@ export class OverlayScreen {
     document.getElementById('restart-from-death')?.addEventListener('click', () => {
       this.onRestartFromDeath?.();
     });
+    document.getElementById('restart-from-death')?.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      this.onRestartFromDeath?.();
+    }, { passive: false });
 
     document.getElementById('restart-from-victory')?.addEventListener('click', () => {
       this.onRestartFromVictory?.();
     });
+    document.getElementById('restart-from-victory')?.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      this.onRestartFromVictory?.();
+    }, { passive: false });
 
     document.getElementById('pointer-lock-retry')?.addEventListener('click', () => {
       this.onPointerLockRetry?.();

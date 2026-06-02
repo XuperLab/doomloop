@@ -50,9 +50,9 @@ export const ARENA_THEMES: ArenaTheme[] = [
       ambient: 0xFFCC88, fog: 0xCCBBAA,
     },
     lighting: {
-      ambientIntensity: 0.8,
-      directional: { color: 0xFFFFFF, intensity: 1.5, position: [10, 20, 10] },
-      fogNear: 30, fogFar: 60,
+      ambientIntensity: 1.5,
+      directional: { color: 0xFFFFFF, intensity: 2.0, position: [10, 20, 10] },
+      fogNear: 45, fogFar: 90,
     },
     pillar: {
       shape: 'box', minHeight: 6, maxHeight: 10,
@@ -76,9 +76,9 @@ export const ARENA_THEMES: ArenaTheme[] = [
       floorAccent: 0xFF4400,
     },
     lighting: {
-      ambientIntensity: 0.6,
-      directional: { color: 0xFF6633, intensity: 1.2, position: [5, 15, 5] },
-      fogNear: 25, fogFar: 50,
+      ambientIntensity: 1.2,
+      directional: { color: 0xFF6633, intensity: 1.8, position: [5, 15, 5] },
+      fogNear: 35, fogFar: 70,
     },
     pillar: {
       shape: 'cylinder', minHeight: 5, maxHeight: 9,
@@ -103,9 +103,9 @@ export const ARENA_THEMES: ArenaTheme[] = [
       floorAccent: 0x4488FF,
     },
     lighting: {
-      ambientIntensity: 0.4,
-      directional: { color: 0x8888FF, intensity: 0.8, position: [0, 25, 0] },
-      fogNear: 20, fogFar: 45,
+      ambientIntensity: 0.8,
+      directional: { color: 0x8888FF, intensity: 1.2, position: [0, 25, 0] },
+      fogNear: 30, fogFar: 60,
     },
     pillar: {
       shape: 'crystal', minHeight: 7, maxHeight: 12,

@@ -134,7 +134,7 @@ export class WaveManager {
     }
 
     this.state = 'intermission';
-    this.timer = 3;
+    this.timer = 4;
 
     this.onSpawnHealthPacks?.();
     this.onSpawnAmmoPickup?.(); // Sprint 4: Large ammo on intermission

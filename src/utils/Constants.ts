@@ -24,7 +24,7 @@ export const PHYSICS_SOLVER_ITERATIONS = 5;
 
 // ── Player ──
 export const PLAYER_EYE_HEIGHT = 1.6;
-export const PLAYER_WALK_SPEED = 12;
+export const PLAYER_WALK_SPEED = 16;
 export const PLAYER_SPRINT_MULTIPLIER = 1.5;
 export const PLAYER_SPRINT_FOV = 70;
 export const PLAYER_DEFAULT_FOV = 75;
@@ -89,9 +89,9 @@ export const SCREEN_SHAKE_DURATION = 0.4;
 export const SCREEN_SHAKE_INTENSITY = 0.08;
 
 // ── Touch Controls (Sprint 2) ──
-export const JOYSTICK_MAX_RADIUS = 80;          // px — maximum drag distance
-export const JOYSTICK_DEAD_ZONE = 8;            // px — dead zone radius
-export const TOUCH_SENSITIVITY = 0.008;          // rad/px (~0.46°/px)
+export const JOYSTICK_MAX_RADIUS = 60;          // px — maximum drag distance (smaller = more responsive)
+export const JOYSTICK_DEAD_ZONE = 4;            // px — dead zone radius (smaller = more sensitive)
+export const TOUCH_SENSITIVITY = 0.012;          // rad/px (~0.69°/px) — increased for faster camera
 export const SPRINT_DOUBLE_TAP_WINDOW = 300;     // ms between taps
 export const CONTROL_FADE_DELAY = 3000;          // ms — fade idle controls (P2)
 export const FADE_OPACITY = 0.3;                 // faded opacity (P2)
